@@ -1,55 +1,84 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/thread_model.dart';
 import '../models/comment_model.dart';
 import 'package:uuid/uuid.dart';
 
-// スレッドのリスト管理
-final threadListProvider =
-    StateNotifierProvider<ThreadListNotifier, List<String>>(
-      (ref) => ThreadListNotifier(),
-    );
+/// **スレッド全体を管理するプロバイダー**
+final threadProvider = StateNotifierProvider<ThreadNotifier, List<Thread>>(
+  (ref) => ThreadNotifier(),
+);
 
-// スレッドごとの閲覧数管理
-final threadViewCountProvider =
-    StateNotifierProvider<ThreadViewCountNotifier, Map<String, int>>(
-      (ref) => ThreadViewCountNotifier(),
-    );
-
-class ThreadListNotifier extends StateNotifier<List<String>> {
-  ThreadListNotifier()
+/// **スレッド管理クラス**
+class ThreadNotifier extends StateNotifier<List<Thread>> {
+  ThreadNotifier()
     : super([
-        'Flutterの質問スレッド',
-        'Dartの基本を学ぼう',
-        '初心者向けプログラミング',
-        'Flutterで匿名掲示板を作る',
-        '技術雑談スレッド',
+        Thread(title: 'Flutterの質問スレッド'),
+        Thread(title: 'Dartの基本を学ぼう'),
+        Thread(title: '初心者向けプログラミング'),
+        Thread(title: 'Flutterで匿名掲示板を作る'),
+        Thread(title: '技術雑談スレッド'),
       ]);
 
-  void addThread(String threadTitle) {
-    print('Thread added: $threadTitle');
-    state = [...state, threadTitle];
+  /// **スレッドを追加**
+  void addThread(String title) {
+    final newThread = Thread(title: title);
+    state = [...state, newThread];
+  }
+
+  /// **スレッドのビュー数を増やす**
+  void incrementViewCount(String title) {
+    state =
+        state.map((thread) {
+          if (thread.title == title) {
+            return thread.copyWith(viewCount: thread.viewCount + 1);
+          }
+          return thread;
+        }).toList();
+  }
+
+  /// **スレッドの書き込み数を増やす**
+  void incrementCommentCount(String title) {
+    state =
+        state.map((thread) {
+          if (thread.title == title) {
+            return thread.copyWith(commentCount: thread.commentCount + 1);
+          }
+          return thread;
+        }).toList();
+  }
+
+  // **追加**: スレッドの書き込み数を取得する
+  int getCommentCount(String title) {
+    return state
+        .firstWhere(
+          (thread) => thread.title == title,
+          orElse: () => Thread(title: '', commentCount: 0),
+        )
+        .commentCount;
+  }
+
+  /// **スレッドの作成日時を取得**
+  DateTime? getThreadCreatedAt(String title) {
+    return state
+        .firstWhere(
+          (thread) => thread.title == title,
+          orElse: () => Thread(title: ''),
+        )
+        .createdAt;
   }
 }
 
-class ThreadViewCountNotifier extends StateNotifier<Map<String, int>> {
-  ThreadViewCountNotifier() : super({});
-
-  void incrementViewCount(String threadTitle) {
-    print('Thread viewed: $threadTitle');
-    state = {...state, threadTitle: (state[threadTitle] ?? 0) + 1};
-  }
-}
-
-// コメントモデルの定義
-
+/// **スレッドごとのコメント管理**
 final threadCommentsProvider =
     StateNotifierProvider.family<ThreadCommentsNotifier, List<Comment>, String>(
       (ref, threadTitle) => ThreadCommentsNotifier(),
     );
 
+/// **コメント管理クラス**
 class ThreadCommentsNotifier extends StateNotifier<List<Comment>> {
   ThreadCommentsNotifier() : super([]);
 
-  // コメント追加時に、既存のコメント数からレス番号を決定
+  /// **コメント追加**
   void addComment({
     required int resNumber,
     required String name,
@@ -58,7 +87,6 @@ class ThreadCommentsNotifier extends StateNotifier<List<Comment>> {
     required String userId,
     required String timestamp,
   }) {
-    // final int newResNumber = state.length + 1; // レス番号は現在のコメント数+1
     final comment = Comment(
       resNumber: resNumber,
       name: name,
@@ -67,7 +95,6 @@ class ThreadCommentsNotifier extends StateNotifier<List<Comment>> {
       userId: userId,
       timestamp: timestamp,
     );
-    print('Comment added: $comment');
     state = [...state, comment];
   }
 }
