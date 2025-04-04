@@ -23,7 +23,6 @@ class _CreateThreadScreenState extends ConsumerState<CreateThreadScreen> {
     final userIdAsync = ref.watch(userIdProvider);
 
     return BaseScreen(
-      // BaseScreen を適用
       child: Scaffold(
         appBar: AppBar(title: Text('スレッド作成')),
         body: userIdAsync.when(
@@ -96,7 +95,7 @@ class _CreateThreadScreenState extends ConsumerState<CreateThreadScreen> {
     final commentNotifier = ref.read(threadCommentsProvider(title).notifier);
 
     // スレッドを作成
-    threadNotifier.addThread(title);
+    threadNotifier.addThread(title, 0, 1);
 
     // 最初の書き込み（レス番号1）
     commentNotifier.addComment(

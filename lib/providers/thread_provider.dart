@@ -20,8 +20,13 @@ class ThreadNotifier extends StateNotifier<List<Thread>> {
       ]);
 
   /// **スレッドを追加**
-  void addThread(String title) {
-    final newThread = Thread(title: title);
+  void addThread(String title, int viewCount, int commentCount) {
+    final newThread = Thread(
+      title: title,
+      viewCount: viewCount,
+      commentCount: commentCount,
+      createdAt: DateTime.now(),
+    );
     state = [...state, newThread];
   }
 

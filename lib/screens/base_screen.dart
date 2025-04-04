@@ -16,7 +16,7 @@ class BaseScreen extends ConsumerStatefulWidget {
 }
 
 class _BaseScreenState extends ConsumerState<BaseScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
 
   @override
   void initState() {
@@ -30,7 +30,7 @@ class _BaseScreenState extends ConsumerState<BaseScreen> {
       ThreadListScreen(),
       widget.threadTitle != null
           ? ThreadDetailScreen(threadTitle: widget.threadTitle!)
-          : Container(),
+          : Center(child: Text('スレッドを選択してください')),
       SettingsScreen(),
     ];
 

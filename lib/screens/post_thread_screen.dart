@@ -24,7 +24,7 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
     final userIdFuture = ref.watch(userIdProvider);
 
     return BaseScreen(
-      initialIndex: 0, // スレッド一覧のタブを維持
+      initialIndex: 1,
       child: Scaffold(
         appBar: AppBar(title: Text('書き込み')),
         body: userIdFuture.when(

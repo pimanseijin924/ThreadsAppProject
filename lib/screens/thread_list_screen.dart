@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:my_app/screens/base_screen.dart';
 import '../providers/thread_provider.dart';
-import 'thread_detail_screen.dart';
 import 'create_thread_screen.dart';
 
 class ThreadListScreen extends ConsumerWidget {
@@ -53,8 +53,10 @@ class ThreadListScreen extends ConsumerWidget {
                         context,
                         MaterialPageRoute(
                           builder:
-                              (context) =>
-                                  ThreadDetailScreen(threadTitle: thread.title),
+                              (context) => BaseScreen(
+                                initialIndex: 1,
+                                threadTitle: thread.title,
+                              ),
                         ),
                       );
                     },

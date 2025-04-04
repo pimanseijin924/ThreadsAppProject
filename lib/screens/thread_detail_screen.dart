@@ -21,114 +21,110 @@ class ThreadDetailScreen extends ConsumerWidget {
         );
     final comments = ref.watch(threadCommentsProvider(threadTitle));
 
-    return BaseScreen(
-      initialIndex: 0,
-      child: Scaffold(
-        appBar: AppBar(title: Text(thread.title)),
-        body: Column(
-          children: [
-            // スレッド情報
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    thread.title,
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    '閲覧数: ${thread.viewCount} | 書き込み数: ${thread.commentCount}',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  Text(
-                    '作成日時: ${DateFormat('yy/MM/dd HH:mm:ss.SS').format(thread.createdAt)}',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
+    return Scaffold(
+      appBar: AppBar(title: Text(thread.title)),
+      body: Column(
+        children: [
+          // スレッド情報
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  thread.title,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '閲覧数: ${thread.viewCount} | 書き込み数: ${thread.commentCount}',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                Text(
+                  '作成日時: ${DateFormat('yy/MM/dd HH:mm:ss.SS').format(thread.createdAt)}',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
             ),
-            Divider(),
+          ),
+          Divider(),
 
-            // 書き込みリスト
-            Expanded(
-              child:
-                  comments.isEmpty
-                      ? Center(child: Text('まだ書き込みがありません'))
-                      : ListView.builder(
-                        itemCount: comments.length,
-                        itemBuilder: (context, index) {
-                          final comment = comments[index];
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8.0,
-                              vertical: 4.0,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // 1段目（レス番号、名前、メール、時間）
-                                Row(
-                                  children: [
-                                    Text(
-                                      '${comment.resNumber} ',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+          // 書き込みリスト
+          Expanded(
+            child:
+                comments.isEmpty
+                    ? Center(child: Text('まだ書き込みがありません'))
+                    : ListView.builder(
+                      itemCount: comments.length,
+                      itemBuilder: (context, index) {
+                        final comment = comments[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 4.0,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 1段目（レス番号、名前、メール、時間）
+                              Row(
+                                children: [
+                                  Text(
+                                    '${comment.resNumber} ',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    Text(
-                                      comment.name?.isNotEmpty == true
-                                          ? comment.name
-                                          : 'ななしさん',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (comment.email != null &&
-                                        comment.email!.isNotEmpty)
-                                      Text(
-                                        ' <${comment.email}>',
-                                        style: TextStyle(color: Colors.blue),
-                                      ),
-                                    Spacer(),
-                                    Text(
-                                      comment.timestamp,
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                                // 2段目（ユーザーID）
-                                Text(
-                                  'ID: ${comment.userId}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
                                   ),
+                                  Text(
+                                    comment.name?.isNotEmpty == true
+                                        ? comment.name
+                                        : 'ななしさん',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (comment.email != null &&
+                                      comment.email!.isNotEmpty)
+                                    Text(
+                                      ' <${comment.email}>',
+                                      style: TextStyle(color: Colors.blue),
+                                    ),
+                                  Spacer(),
+                                  Text(
+                                    comment.timestamp,
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                              // 2段目（ユーザーID）
+                              Text(
+                                'ID: ${comment.userId}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
                                 ),
-                                // 3段目（コメント本文）
-                                Text(comment.content),
-                                Divider(),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                              ),
+                              // 3段目（コメント本文）
+                              Text(comment.content),
+                              Divider(),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PostThreadScreen(threadTitle: threadTitle),
             ),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (context) => PostThreadScreen(threadTitle: threadTitle),
-              ),
-            );
-          },
-          child: Icon(Icons.edit),
-        ),
+          );
+        },
+        child: Icon(Icons.edit),
       ),
     );
   }
