@@ -105,6 +105,7 @@ class _CreateThreadScreenState extends ConsumerState<CreateThreadScreen> {
       content: content,
       userId: userId,
       timestamp: DateFormat('yy/MM/dd HH:mm:ss.SS').format(DateTime.now()),
+      imageUrl: null,
     );
 
     // 一覧画面に戻る

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
+//import 'firebase_options.dart';
 import '../screens/base_screen.dart';
 
 // テーマプロバイダ（明るい・暗いテーマを切り替え）
@@ -9,7 +11,9 @@ final themeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
 // ロケール（言語設定）プロバイダ
 final localeProvider = StateProvider<Locale>((ref) => Locale('ja', 'JP'));
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(ProviderScope(child: AnonymousBoardApp()));
 }
 
