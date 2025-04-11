@@ -3,13 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/thread_model.dart';
 import '../providers/thread_provider.dart';
-import 'post_thread_screen.dart';
+import '../widgets/comment_image_grid.dart';
 import 'base_screen.dart';
+import 'post_thread_screen.dart';
 
 class ThreadDetailScreen extends ConsumerWidget {
   final String threadTitle;
+  final bool showBackToTab;
 
-  ThreadDetailScreen({required this.threadTitle});
+  const ThreadDetailScreen({
+    Key? key,
+    required this.threadTitle,
+    this.showBackToTab = false,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -22,7 +28,18 @@ class ThreadDetailScreen extends ConsumerWidget {
     final comments = ref.watch(threadCommentsProvider(threadTitle));
 
     return Scaffold(
-      appBar: AppBar(title: Text(thread.title)),
+      appBar: AppBar(
+        leading:
+            showBackToTab
+                ? IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: () {
+                    BaseScreen.setTab(context, 1); // スレッド一覧画面に戻る
+                  },
+                )
+                : null,
+        title: Text(thread.title),
+      ),
       body: Column(
         children: [
           // スレッド情報
@@ -76,7 +93,7 @@ class ThreadDetailScreen extends ConsumerWidget {
                                     ),
                                   ),
                                   Text(
-                                    comment.name?.isNotEmpty == true
+                                    comment.name.isNotEmpty == true
                                         ? comment.name
                                         : 'ななしさん',
                                     style: TextStyle(
@@ -84,14 +101,16 @@ class ThreadDetailScreen extends ConsumerWidget {
                                     ),
                                   ),
                                   if (comment.email != null &&
-                                      comment.email!.isNotEmpty)
+                                      comment.email.isNotEmpty)
                                     Text(
                                       ' <${comment.email}>',
                                       style: TextStyle(color: Colors.blue),
                                     ),
                                   Spacer(),
                                   Text(
-                                    comment.timestamp,
+                                    DateFormat(
+                                      'yy/MM/dd HH:mm:ss.SS',
+                                    ).format(comment.sendTime),
                                     style: TextStyle(fontSize: 12),
                                   ),
                                 ],
@@ -106,6 +125,10 @@ class ThreadDetailScreen extends ConsumerWidget {
                               ),
                               // 3段目（コメント本文）
                               Text(comment.content),
+                              // 画像があれば表示
+                              if (comment.imageUrl != null &&
+                                  comment.imageUrl!.isNotEmpty)
+                                CommentImageGrid(imageUrls: comment.imageUrl!),
                               Divider(),
                             ],
                           ),
@@ -117,8 +140,8 @@ class ThreadDetailScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
+          // PostThreadScreen を同じ Navigator 上で push
+          Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => PostThreadScreen(threadTitle: threadTitle),
             ),

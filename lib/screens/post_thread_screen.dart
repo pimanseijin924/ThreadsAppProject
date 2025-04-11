@@ -1,19 +1,17 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_core/firebase_core.dart'; // Firebase初期化用
 import '../widgets/dashed_boder_painter.dart';
 import '../providers/thread_provider.dart';
 import '../providers/user_id_provider.dart';
 import '../services/storage_service.dart';
-import 'base_screen.dart';
 
 class PostThreadScreen extends ConsumerStatefulWidget {
   final String threadTitle;
 
-  PostThreadScreen({required this.threadTitle});
+  const PostThreadScreen({Key? key, required this.threadTitle})
+    : super(key: key);
 
   @override
   _PostThreadScreenState createState() => _PostThreadScreenState();
@@ -26,6 +24,7 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
 
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
+  final List<XFile> _selectedImages = [];
   bool _isUploading = false;
   double _uploadProgress = 0.0;
   final StorageService _storageService = StorageService();
@@ -34,19 +33,17 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
   Widget build(BuildContext context) {
     final userIdFuture = ref.watch(userIdProvider);
 
-    return BaseScreen(
-      initialIndex: 1,
-      child: Scaffold(
-        appBar: AppBar(title: Text('書き込み')),
-        body: userIdFuture.when(
-          data: (userId) => _buildForm(context, ref, userId),
-          loading: () => Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('エラーが発生しました: $e')),
-        ),
+    return Scaffold(
+      appBar: AppBar(title: Text('書き込み')),
+      body: userIdFuture.when(
+        data: (userId) => _buildForm(context, ref, userId),
+        loading: () => Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('エラーが発生しました: $e')),
       ),
     );
   }
 
+  // REVIEW: 書き込み画面の中身は別ファイルに分けてもいいかも？
   Widget _buildForm(BuildContext context, WidgetRef ref, String userId) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -97,6 +94,8 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
     );
   }
 
+  // 画像選択ボタンとプレビューを表示するウィジェット
+  // REVIEW: 画像アップ画面は別ファイルに分けてもいいかも？
   Widget _buildImageSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,7 +109,7 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
           children: [
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: _isUploading ? null : _pickImage,
+                onPressed: _isUploading ? null : _pickImages,
                 icon: Icon(Icons.photo_library),
                 label: Text('ギャラリー'),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
@@ -128,30 +127,45 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
           ],
         ),
         SizedBox(height: 10),
-        _selectedImage != null
-            ? Stack(
-              alignment: Alignment.topRight,
-              children: [
-                Container(
-                  height: 150,
-                  width: 150,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                  ),
-                  child: Image.file(_selectedImage!, fit: BoxFit.cover),
-                ),
-                InkWell(
-                  onTap: _isUploading ? null : _removeImage,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    padding: EdgeInsets.all(4),
-                    child: Icon(Icons.close, color: Colors.white, size: 16),
-                  ),
-                ),
-              ],
+        _selectedImages.isNotEmpty
+            ? Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children:
+                  _selectedImages.map((image) {
+                    return Stack(
+                      alignment: Alignment.topRight,
+                      children: [
+                        Container(
+                          height: 100,
+                          width: 100,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                          ),
+                          child: Image.file(
+                            File(image.path),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        InkWell(
+                          onTap:
+                              _isUploading ? null : () => _removeImage(image),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            padding: EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
             )
             : Container(
               height: 100,
@@ -173,21 +187,32 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
     );
   }
 
-  Future<void> _pickImage() async {
-    final XFile? image = await _picker.pickImage(
-      source: ImageSource.gallery,
+  // アップロード予定の画像のプレビューから画像を削除するメソッド
+  // REVIEW: removeImage utilsに移してもいいかも
+  void _removeImage(XFile image) {
+    setState(() {
+      _selectedImages.remove(image);
+    });
+  }
+
+  // 画像選択ダイアログを表示するメソッド
+  // REVIEW: pickImages utilsに移してもいいかも
+  Future<void> _pickImages() async {
+    final List<XFile>? images = await _picker.pickMultiImage(
       maxWidth: 1200,
       maxHeight: 1200,
       imageQuality: 85,
     );
 
-    if (image != null) {
+    if (images != null && images.isNotEmpty) {
       setState(() {
-        _selectedImage = File(image.path);
+        _selectedImages.addAll(images);
       });
     }
   }
 
+  // カメラで写真を撮影するメソッド
+  // REVIEW: takePhoto utilsに移してもいいかも
   Future<void> _takePhoto() async {
     final XFile? photo = await _picker.pickImage(
       source: ImageSource.camera,
@@ -199,22 +224,19 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
     if (photo != null) {
       setState(() {
         _selectedImage = File(photo.path);
+        _selectedImages.add(photo);
       });
     }
   }
 
-  void _removeImage() {
-    setState(() {
-      _selectedImage = null;
-    });
-  }
-
+  // 書き込みを投稿するメソッド
+  // REVIEW: postComment utilsに移してもいいかも
   Future<void> _postComment(
     BuildContext context,
     WidgetRef ref,
     String userId,
   ) async {
-    if (_contentController.text.isEmpty && _selectedImage == null) {
+    if (_contentController.text.isEmpty && _selectedImages.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('書き込み内容または画像を入力してください')));
@@ -227,7 +249,7 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
     });
 
     try {
-      final now = DateFormat('yy/MM/dd HH:mm:ss.SS').format(DateTime.now());
+      final now = DateTime.now();
       final threadNotifier = ref.read(threadProvider.notifier);
       final commentNotifier = ref.read(
         threadCommentsProvider(widget.threadTitle).notifier,
@@ -235,25 +257,26 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
       final commentCount =
           threadNotifier.getCommentCount(widget.threadTitle) + 1;
 
-      String? imageUrl;
+      List<String> imageUrls = [];
 
       // 画像があれば先にアップロード
-      if (_selectedImage != null) {
-        // ファイル名に日付時刻を含めて一意にする
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final fileName =
-            'thread_${widget.threadTitle}_comment_${commentCount}_$timestamp.jpg';
+      if (_selectedImages.isNotEmpty) {
+        for (int i = 0; i < _selectedImages.length; i++) {
+          final image = _selectedImages[i];
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final fileName =
+              'thread_${widget.threadTitle}_comment_${commentCount}_$timestamp.jpg';
 
-        // Firebase Storageにアップロード
-        setState(() {
-          _uploadProgress = 0.3; // アップロード開始を示す
-        });
+          final imageUrl = await _storageService.uploadImage(
+            File(image.path),
+            fileName,
+          );
+          imageUrls.add(imageUrl);
 
-        imageUrl = await _storageService.uploadImage(_selectedImage!, fileName);
-
-        setState(() {
-          _uploadProgress = 0.7; // 画像アップロード完了
-        });
+          setState(() {
+            _uploadProgress = (i + 1) / _selectedImages.length * 0.7;
+          });
+        }
       }
 
       // 書き込みを追加
@@ -263,8 +286,8 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
         email: _emailController.text,
         content: _contentController.text,
         userId: userId,
-        timestamp: now,
-        imageUrl: imageUrl,
+        sendTime: now,
+        imageUrl: imageUrls,
       );
 
       setState(() {

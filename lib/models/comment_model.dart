@@ -1,12 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Comment {
-  final int resNumber; // 通番（レス番号）
+  final int resNumber;
   final String name;
   final String email;
   final String content;
   final String userId;
-  final String timestamp;
-  final String imageUrl; // 画像URL
-  final String? imagePath; // 画像パス（ローカル保存用）
+  final DateTime sendTime;
+  final List<String>? imageUrl; // 画像URL
+  final List<String>? imagePath; // 画像パス（ローカル保存用）
 
   Comment({
     required this.resNumber,
@@ -14,8 +16,22 @@ class Comment {
     required this.email,
     required this.content,
     required this.userId,
-    required this.timestamp,
-    required this.imageUrl,
+    required this.sendTime,
+    this.imageUrl,
     this.imagePath,
   });
+
+  factory Comment.fromFireStore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Comment(
+      resNumber: data['resNumber'] ?? 0,
+      name: data['name'] ?? '',
+      email: data['email'] ?? '',
+      content: data['content'] ?? '',
+      userId: data['userId'] ?? '',
+      sendTime: data['sendTime'] ?? '',
+      imageUrl: data['imageUrl'],
+      imagePath: data['imagePath'],
+    );
+  }
 }

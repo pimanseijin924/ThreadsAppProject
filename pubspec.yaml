@@ -21,6 +21,14 @@ dependencies:
   firebase_core: ^2.15.0
   firebase_storage: ^11.2.5
   image_picker: ^1.0.7
+  cloud_firestore: ^4.0.0
+  #image_downloader: ^0.31.0 古いので代わりにimage_gallery_saverを使用
+  #multi_image_picker: ^4.8.0
+  file_picker: ^8.0.3
+  #image_gallery_saver: ^2.0.3 これも古いので代わりにflutter_image_gallery_saverを使用
+  flutter_image_gallery_saver: ^0.0.2
+  dio: ^5.8.0
+  
 
 dev_dependencies:
   flutter_test:

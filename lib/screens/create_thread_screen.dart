@@ -22,14 +22,12 @@ class _CreateThreadScreenState extends ConsumerState<CreateThreadScreen> {
   Widget build(BuildContext context) {
     final userIdAsync = ref.watch(userIdProvider);
 
-    return BaseScreen(
-      child: Scaffold(
-        appBar: AppBar(title: Text('スレッド作成')),
-        body: userIdAsync.when(
-          data: (userId) => _buildForm(context, userId),
-          loading: () => Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('エラーが発生しました')),
-        ),
+    return Scaffold(
+      appBar: AppBar(title: Text('スレッド作成')),
+      body: userIdAsync.when(
+        data: (userId) => _buildForm(context, userId),
+        loading: () => Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(child: Text('エラーが発生しました')),
       ),
     );
   }
@@ -104,7 +102,7 @@ class _CreateThreadScreenState extends ConsumerState<CreateThreadScreen> {
       email: email,
       content: content,
       userId: userId,
-      timestamp: DateFormat('yy/MM/dd HH:mm:ss.SS').format(DateTime.now()),
+      sendTime: DateTime.now(),
       imageUrl: null,
     );
 

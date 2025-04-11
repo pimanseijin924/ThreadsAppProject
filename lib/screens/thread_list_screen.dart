@@ -2,18 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:my_app/screens/base_screen.dart';
+import 'package:my_app/screens/thread_detail_screen.dart';
 import '../providers/thread_provider.dart';
 import 'create_thread_screen.dart';
 
 class ThreadListScreen extends ConsumerWidget {
+  final String boardId;
+  final bool showBackToTab0;
+
+  const ThreadListScreen({
+    Key? key,
+    this.boardId = '',
+    this.showBackToTab0 = false,
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final threads = ref.watch(threadProvider);
 
     return Scaffold(
       appBar: AppBar(
+        leading:
+            showBackToTab0
+                ? IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: () {
+                    BaseScreen.setTab(context, 0); // チャンネル・板タブに戻す
+                  },
+                )
+                : null,
         title: Text('スレッド一覧'),
-        automaticallyImplyLeading: false, // ← これで「← ボタン」を非表示にする
       ),
       body:
           threads.isEmpty
@@ -48,17 +66,21 @@ class ThreadListScreen extends ConsumerWidget {
                           .read(threadProvider.notifier)
                           .incrementViewCount(thread.title);
 
-                      // スレッド詳細画面へ遷移
-                      Navigator.push(
+                      // 同じタブ内の Navigator でスレッド詳細画面へ遷移
+                      // BaseScreen.pushThreadDetailTab(context, thread.title);
+                      BaseScreen.setTabAndPush(
                         context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) => BaseScreen(
-                                initialIndex: 1,
-                                threadTitle: thread.title,
-                              ),
-                        ),
+                        1,
+                        2,
+                        ThreadDetailScreen(threadTitle: thread.title),
                       );
+                      // Navigator.of(context).push(
+                      //   MaterialPageRoute(
+                      //     builder:
+                      //         (context) =>
+                      //             ThreadDetailScreen(threadTitle: thread.title),
+                      //   ),
+                      // );
                     },
                   );
                 },
@@ -66,10 +88,9 @@ class ThreadListScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // スレッド作成画面へ遷移
-          Navigator.push(
+          Navigator.of(
             context,
-            MaterialPageRoute(builder: (context) => CreateThreadScreen()),
-          );
+          ).push(MaterialPageRoute(builder: (context) => CreateThreadScreen()));
         },
         child: Icon(Icons.add),
       ),

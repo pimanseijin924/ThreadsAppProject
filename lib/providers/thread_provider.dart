@@ -90,9 +90,9 @@ class ThreadCommentsNotifier extends StateNotifier<List<Comment>> {
     required String email,
     required String content,
     required String userId,
-    required String timestamp,
-    required String? imageUrl,
-    String? imagePath,
+    required DateTime sendTime,
+    List<String>? imageUrl,
+    List<String>? imagePath,
   }) {
     final comment = Comment(
       resNumber: resNumber,
@@ -100,9 +100,9 @@ class ThreadCommentsNotifier extends StateNotifier<List<Comment>> {
       email: email,
       content: content,
       userId: userId,
-      timestamp: timestamp,
-      imageUrl: imageUrl ?? '', // 画像URLは必須ではないので、nullの場合は空文字を設定
-      imagePath: imagePath, // 画像パスもオプション
+      sendTime: sendTime,
+      imageUrl: imageUrl ?? [], // 画像URLは必須ではないので、nullの場合は空文字を設定
+      imagePath: imagePath ?? [], // 画像パスもオプション
     );
     state = [...state, comment];
   }
