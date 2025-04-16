@@ -2,16 +2,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import '../widgets/dashed_boder_painter.dart';
-import '../providers/thread_provider.dart';
-import '../providers/user_id_provider.dart';
-import '../services/storage_service.dart';
+import 'package:my_app/models/thread_model.dart';
+import 'package:my_app/widgets/dashed_boder_painter.dart';
+import 'package:my_app/providers/thread_provider.dart';
+import 'package:my_app/providers/user_id_provider.dart';
+import 'package:my_app/services/storage_service.dart';
 
 class PostThreadScreen extends ConsumerStatefulWidget {
-  final String threadTitle;
+  final Thread thread;
 
-  const PostThreadScreen({Key? key, required this.threadTitle})
-    : super(key: key);
+  const PostThreadScreen({Key? key, required this.thread}) : super(key: key);
 
   @override
   _PostThreadScreenState createState() => _PostThreadScreenState();
@@ -36,7 +36,7 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
     return Scaffold(
       appBar: AppBar(title: Text('書き込み')),
       body: userIdFuture.when(
-        data: (userId) => _buildForm(context, ref, userId),
+        data: (userId) => _buildForm(context, ref, userId, widget.thread),
         loading: () => Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('エラーが発生しました: $e')),
       ),
@@ -44,7 +44,14 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
   }
 
   // REVIEW: 書き込み画面の中身は別ファイルに分けてもいいかも？
-  Widget _buildForm(BuildContext context, WidgetRef ref, String userId) {
+  Widget _buildForm(
+    BuildContext context,
+    WidgetRef ref,
+    String userId,
+    Thread thread,
+    ConsumerState state,
+  ) {
+    // スレッドの詳細を取得するプロバイダーを使用して、スレッドの詳細を取得
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: SingleChildScrollView(
@@ -52,7 +59,7 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextField(
-              controller: _nameController,
+              controller: state.nameController,
               decoration: InputDecoration(labelText: '名前'),
             ),
             TextField(
@@ -85,7 +92,7 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
               onPressed:
                   _isUploading
                       ? null
-                      : () => _postComment(context, ref, userId),
+                      : () => _postComment(context, ref, userId, thread),
               child: _isUploading ? Text('投稿中...') : Text('投稿'),
             ),
           ],
@@ -235,6 +242,7 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
     BuildContext context,
     WidgetRef ref,
     String userId,
+    Thread thread,
   ) async {
     if (_contentController.text.isEmpty && _selectedImages.isEmpty) {
       ScaffoldMessenger.of(
@@ -249,13 +257,9 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
     });
 
     try {
-      final now = DateTime.now();
       final threadNotifier = ref.read(threadProvider.notifier);
-      final commentNotifier = ref.read(
-        threadCommentsProvider(widget.threadTitle).notifier,
-      );
       final commentCount =
-          threadNotifier.getCommentCount(widget.threadTitle) + 1;
+          threadNotifier.getCommentCount(widget.thread.title) + 1;
 
       List<String> imageUrls = [];
 
@@ -265,7 +269,7 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
           final image = _selectedImages[i];
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           final fileName =
-              'thread_${widget.threadTitle}_comment_${commentCount}_$timestamp.jpg';
+              'thread_${widget.thread.title}_comment_${commentCount}_$timestamp.jpg';
 
           final imageUrl = await _storageService.uploadImage(
             File(image.path),
@@ -280,14 +284,15 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
       }
 
       // 書き込みを追加
-      commentNotifier.addComment(
-        resNumber: commentCount,
-        name: _nameController.text.isNotEmpty ? _nameController.text : '名無しさん',
-        email: _emailController.text,
+      final addCommentService = ref.read(addCommentProvider);
+
+      await addCommentService.addComment(
+        threadId: widget.thread.id,
+        writerId: userId,
+        writerName: _nameController.text,
+        writerEmail: _emailController.text,
         content: _contentController.text,
-        userId: userId,
-        sendTime: now,
-        imageUrl: imageUrls,
+        imageUrls: _selectedImages.isNotEmpty ? imageUrls : null,
       );
 
       setState(() {
@@ -295,7 +300,7 @@ class _PostThreadScreenState extends ConsumerState<PostThreadScreen> {
       });
 
       // スレッドの書き込み数を更新
-      threadNotifier.incrementCommentCount(widget.threadTitle);
+      threadNotifier.incrementCommentCount(widget.thread.id);
 
       setState(() {
         _uploadProgress = 1.0; // 完了

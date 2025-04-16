@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../providers/thread_provider.dart';
 import '../providers/user_id_provider.dart';
-import 'base_screen.dart';
 
 class CreateThreadScreen extends ConsumerStatefulWidget {
-  const CreateThreadScreen({Key? key}) : super(key: key);
+  final String boardId;
+
+  const CreateThreadScreen({Key? key, required this.boardId}) : super(key: key);
 
   @override
   _CreateThreadScreenState createState() => _CreateThreadScreenState();
@@ -90,21 +90,21 @@ class _CreateThreadScreenState extends ConsumerState<CreateThreadScreen> {
     }
 
     final threadNotifier = ref.read(threadProvider.notifier);
-    final commentNotifier = ref.read(threadCommentsProvider(title).notifier);
+    //final commentNotifier = ref.read(threadCommentsProvider(title).notifier);
 
     // スレッドを作成
     threadNotifier.addThread(title, 0, 1);
 
     // 最初の書き込み（レス番号1）
-    commentNotifier.addComment(
-      resNumber: 1,
-      name: name,
-      email: email,
-      content: content,
-      userId: userId,
-      sendTime: DateTime.now(),
-      imageUrl: null,
-    );
+    // commentNotifier.addComment(
+    //   resNumber: 1,
+    //   name: name,
+    //   email: email,
+    //   content: content,
+    //   userId: userId,
+    //   sendTime: DateTime.now(),
+    //   imageUrl: null,
+    // );
 
     // 一覧画面に戻る
     Navigator.pop(context);

@@ -25,12 +25,13 @@ class Comment {
     final data = doc.data() as Map<String, dynamic>;
     return Comment(
       resNumber: data['resNumber'] ?? 0,
-      name: data['name'] ?? '',
-      email: data['email'] ?? '',
+      name: data['writerName'] ?? '',
+      email: data['writerEmail'] ?? '',
       content: data['content'] ?? '',
-      userId: data['userId'] ?? '',
-      sendTime: data['sendTime'] ?? '',
-      imageUrl: data['imageUrl'],
+      userId: data['writerId'] ?? '',
+      sendTime: data['sendTime'] ?? DateTime.now(),
+      imageUrl:
+          data['imageUrl'] != null ? List<String>.from(data['imageUrl']) : null,
       imagePath: data['imagePath'],
     );
   }

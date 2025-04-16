@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
-//import 'firebase_options.dart';
-import '../screens/base_screen.dart';
+import 'package:my_app/router/router.dart';
 
 // テーマプロバイダ（明るい・暗いテーマを切り替え）
 final themeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
@@ -18,12 +17,15 @@ void main() async {
 }
 
 class AnonymousBoardApp extends ConsumerWidget {
+  const AnonymousBoardApp({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
     final locale = ref.watch(localeProvider);
 
-    return MaterialApp(
+    return MaterialApp.router(
+      routerConfig: router,
       title: '匿名掲示板',
       themeMode: themeMode,
       theme: ThemeData.light(),
@@ -35,7 +37,6 @@ class AnonymousBoardApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: BaseScreen(),
     );
   }
 }

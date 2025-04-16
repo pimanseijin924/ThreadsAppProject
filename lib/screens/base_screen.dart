@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'channnel_list_screen.dart';
+import 'channel_list_screen.dart';
 import 'thread_list_screen.dart';
 import 'thread_detail_screen.dart';
 import 'setting_screen.dart';
@@ -70,6 +70,7 @@ class BaseScreen extends ConsumerStatefulWidget {
   static void pushThreadListTab(BuildContext context, String boardId) {
     final _BaseScreenState? state =
         context.findAncestorStateOfType<_BaseScreenState>();
+    state?.setTab(1);
     state?.setTabAndPushBoard(boardId);
   }
 
@@ -99,7 +100,7 @@ class _BaseScreenState extends ConsumerState<BaseScreen> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
-    _sharedBoardId = widget.boardId;
+    //_sharedBoardId = widget.boardId;
     _sharedThreadId = widget.threadTitle;
   }
 
@@ -144,13 +145,14 @@ class _BaseScreenState extends ConsumerState<BaseScreen> {
               break;
             case 1:
               page = ThreadListScreen(
-                boardId: widget.boardId ?? '', // 板IDを渡す
+                boardId: _sharedBoardId ?? '', // 板IDを渡す
                 showBackToTab0: true,
               );
               break;
             case 2:
               page = ThreadDetailScreen(
-                threadTitle: widget.threadTitle ?? '', // スレッドタイトルを渡す
+                boardId: _sharedBoardId ?? '', // 板IDを渡す
+                threadId: widget.threadTitle ?? '', // スレッドIDを渡す
                 showBackToTab: true,
               );
               break;

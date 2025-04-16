@@ -28,6 +28,7 @@ dependencies:
   #image_gallery_saver: ^2.0.3 これも古いので代わりにflutter_image_gallery_saverを使用
   flutter_image_gallery_saver: ^0.0.2
   dio: ^5.8.0
+  go_router: ^13.2.0
   
 
 dev_dependencies:
