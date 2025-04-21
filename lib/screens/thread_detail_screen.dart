@@ -22,7 +22,7 @@ class ThreadDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final threadAsync = ref.watch(threadByIdProvider(threadId));
-    final commentsAsync = ref.watch(threadCommentsProvider(threadId));
+    //final commentsAsync = ref.watch(threadCommentsProvider(threadId));
 
     return threadAsync.when(
       data: (thread) {

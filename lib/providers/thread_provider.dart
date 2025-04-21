@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/models/thread_model.dart';
 import 'package:my_app/models/comment_model.dart';
-import 'package:my_app/services/add_comment_service.dart';
+import 'package:my_app/services/thread_service.dart';
 
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
   return FirebaseFirestore.instance;
@@ -100,6 +100,9 @@ final threadCommentsProvider = StreamProvider.family<List<Comment>, String>((
 
 // スレッドにコメントを追加するためのプロバイダー
 final addCommentProvider = Provider((ref) => AddCommentService());
+
+// スレッドを作成するためのプロバイダー
+final createThreadProvider = Provider((ref) => CreateThreadService());
 
 /// **スレッド管理クラス**
 class ThreadNotifier extends StateNotifier<List<Thread>> {

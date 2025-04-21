@@ -128,7 +128,7 @@ final GoRouter router = GoRouter(
               },
             ),
             GoRoute(
-              path: '/thread/create/:boardId',
+              path: '/threads_create/:boardId',
               pageBuilder: (context, state) {
                 final boardId = state.pathParameters['boardId']!;
                 return CustomTransitionPage(

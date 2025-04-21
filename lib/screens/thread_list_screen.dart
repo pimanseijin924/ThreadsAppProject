@@ -20,18 +20,7 @@ class ThreadListScreen extends ConsumerWidget {
     final threadListAsync = ref.watch(boardThreadsProvider(boardId));
 
     return Scaffold(
-      appBar: AppBar(
-        // leading:
-        //     showBackToTab0
-        //         ? IconButton(
-        //           icon: Icon(Icons.arrow_back),
-        //           onPressed: () {
-        //             context.go('/channels');
-        //           },
-        //         )
-        //         : null,
-        title: Text('スレッド一覧'),
-      ),
+      appBar: AppBar(title: Text('スレッド一覧')),
       body: threadListAsync.when(
         data:
             (threads) =>
@@ -93,7 +82,7 @@ class ThreadListScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          context.push('/boards/$boardId/create-thread');
+          context.push('/threads_create/${boardId}');
         },
         child: Icon(Icons.add),
       ),
