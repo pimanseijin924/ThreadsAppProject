@@ -19,6 +19,11 @@ class ThreadListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final threadListAsync = ref.watch(boardThreadsProvider(boardId));
 
+    // 画面表示時に直近閲覧板を更新
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(lastBoardProvider.notifier).setBoardId(boardId);
+    });
+
     return Scaffold(
       appBar: AppBar(title: Text('スレッド一覧')),
       body: threadListAsync.when(

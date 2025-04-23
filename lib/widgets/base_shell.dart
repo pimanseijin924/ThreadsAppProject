@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:my_app/providers/thread_provider.dart';
 
-class BaseShell extends StatelessWidget {
+class BaseShell extends ConsumerWidget {
   final Widget child;
   const BaseShell({super.key, required this.child});
 
@@ -13,9 +15,13 @@ class BaseShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
     final currentIndex = _indexFromLocation(location);
+    // Provider から直近閲覧板を取得
+    final lastBoardId = ref.watch(lastBoardProvider);
+    // Provider から直近閲覧スレッドを取得
+    final lastThread = ref.watch(lastThreadProvider);
 
     return Scaffold(
       body: child,
@@ -28,10 +34,17 @@ class BaseShell extends StatelessWidget {
               context.push('/channels');
               break;
             case 1:
-              context.push('/threads/sampleBoardId');
+              // 直近板ID があればそこへ、なければデフォルト板へ遷移
+              // デフォルト板は運営チャンネル玄関板
+              final targetBoardId = lastBoardId ?? '0001';
+              context.push('/threads/$targetBoardId');
               break;
             case 2:
-              context.push('/thread/sampleThreadId');
+              // 直近に見たスレッドがあればそこへ、なければデフォルトスレッドへ遷移
+              // デフォルトスレッドは玄関板初めての方向けスレッド
+              final targetBoardId = lastThread?.boardId ?? '0001';
+              final targetThreadId = lastThread?.threadId ?? 'default01';
+              context.push('/thread/$targetBoardId/$targetThreadId');
               break;
             case 3:
               context.go('/settings');

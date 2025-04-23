@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/models/thread_model.dart';
 import 'package:my_app/models/comment_model.dart';
+import 'package:my_app/models/last_thread_model.dart';
 import 'package:my_app/services/thread_service.dart';
 
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
@@ -10,9 +13,9 @@ final firestoreProvider = Provider<FirebaseFirestore>((ref) {
 });
 
 /// **スレッド全体を管理するプロバイダー**
-final threadProvider = StateNotifierProvider<ThreadNotifier, List<Thread>>(
-  (ref) => ThreadNotifier(),
-);
+// final threadProvider = StateNotifierProvider<ThreadNotifier, List<Thread>>(
+//   (ref) => ThreadNotifier(),
+// );
 
 /// 指定された boardId に属するスレッド一覧を取得する StreamProvider
 final boardThreadsProvider = StreamProvider.family<List<Thread>, String>((
@@ -104,106 +107,201 @@ final addCommentProvider = Provider((ref) => AddCommentService());
 // スレッドを作成するためのプロバイダー
 final createThreadProvider = Provider((ref) => CreateThreadService());
 
-/// **スレッド管理クラス**
-class ThreadNotifier extends StateNotifier<List<Thread>> {
-  ThreadNotifier()
-    : super([
-        Thread(id: '1', title: 'Flutterの質問スレッド'),
-        Thread(id: '2', title: 'Dartの基本を学ぼう'),
-        Thread(id: '3', title: '初心者向けプログラミング'),
-        Thread(id: '4', title: 'Flutterで匿名掲示板を作る'),
-        Thread(id: '5', title: '技術雑談スレッド'),
-      ]);
+// 閲覧している直近の板情報をローカルに保存
+///SharedPreferences インスタンスをグローバルに提供
+final sharedPrefsProvider = FutureProvider<SharedPreferences>((_) async {
+  return await SharedPreferences.getInstance();
+});
 
-  /// **スレッドを追加**
-  void addThread(String title, int viewCount, int commentCount) {
-    final newThread = Thread(
-      id: '${DateTime.now().millisecondsSinceEpoch}',
-      title: title,
-      viewCount: viewCount,
-      commentCount: commentCount,
-      createdAt: DateTime.now(),
-    );
-    state = [...state, newThread];
-  }
+///直近閲覧板IDを管理する StateNotifier
+class LastBoardNotifier extends StateNotifier<String?> {
+  static const _key = 'last_board_id';
+  final SharedPreferences? _prefs;
 
-  /// **スレッドのビュー数を増やす**
-  void incrementViewCount(String title) {
-    state =
-        state.map((thread) {
-          if (thread.title == title) {
-            return thread.copyWith(viewCount: thread.viewCount + 1);
-          }
-          return thread;
-        }).toList();
-  }
+  LastBoardNotifier(this._prefs) : super(_prefs?.getString(_key));
 
-  /// **スレッドの書き込み数を増やす**
-  void incrementCommentCount(String title) {
-    state =
-        state.map((thread) {
-          if (thread.title == title) {
-            return thread.copyWith(commentCount: thread.commentCount + 1);
-          }
-          return thread;
-        }).toList();
-  }
-
-  // **追加**: スレッドの書き込み数を取得する
-  int getCommentCount(String title) {
-    return state
-        .firstWhere(
-          (thread) => thread.title == title,
-          orElse: () => Thread(id: '0', title: '', commentCount: 0),
-        )
-        .commentCount;
-  }
-
-  /// **スレッドの作成日時を取得**
-  DateTime? getThreadCreatedAt(String title) {
-    return state
-        .firstWhere(
-          (thread) => thread.title == title,
-          orElse: () => Thread(id: '0', title: '', commentCount: 0),
-        )
-        .createdAt;
+  /// 板ID を更新し、SharedPreferences にも書き込む
+  Future<void> setBoardId(String boardId) async {
+    state = boardId;
+    await _prefs?.setString(_key, boardId);
   }
 }
 
-/// **スレッドごとのコメント管理**
-// final threadCommentsProvider =
-//     StateNotifierProvider.family<ThreadCommentsNotifier, List<Comment>, String>(
-//       (ref, threadTitle) => ThreadCommentsNotifier(),
+///StateNotifierProvider を定義
+final lastBoardProvider = StateNotifierProvider<LastBoardNotifier, String?>((
+  ref,
+) {
+  final prefs = ref
+      .watch(sharedPrefsProvider)
+      .maybeWhen(data: (p) => p, orElse: () => null);
+  return LastBoardNotifier(prefs);
+});
+
+/// 直近に見たスレッド情報を管理する StateNotifier
+class LastThreadNotifier extends StateNotifier<LastThread?> {
+  static const _key = 'last_thread';
+  final SharedPreferences? _prefs;
+
+  LastThreadNotifier(this._prefs)
+    : super(
+        // 起動時にキャッシュから復元。なければ null。
+        _prefs?.getString(_key) != null
+            ? LastThread.fromJson(jsonDecode(_prefs!.getString(_key)!))
+            : null,
+      );
+
+  /// スレッド情報を更新し、SharedPreferences に JSON 文字列で永続化
+  Future<void> setLastThread({
+    required String boardId,
+    required String threadId,
+  }) async {
+    final value = LastThread(boardId: boardId, threadId: threadId);
+    state = value;
+    final jsonString = jsonEncode(value.toJson());
+    await _prefs?.setString(_key, jsonString);
+  }
+
+  /// キャッシュをクリアしたいとき
+  Future<void> clear() async {
+    state = null;
+    await _prefs?.remove(_key);
+  }
+}
+
+/// プロバイダー定義
+final lastThreadProvider =
+    StateNotifierProvider<LastThreadNotifier, LastThread?>((ref) {
+      final prefs = ref
+          .watch(sharedPrefsProvider)
+          .maybeWhen(data: (p) => p, orElse: () => null);
+      return LastThreadNotifier(prefs);
+    });
+
+// // 閲覧している直近のスレッド情報をローカルに保存
+// /// 直近に見たスレッドIDを管理する StateNotifier
+// class LastThreadNotifier extends StateNotifier<String?> {
+//   static const _key = 'last_thread_id';
+//   final SharedPreferences? _prefs;
+
+//   LastThreadNotifier(this._prefs) : super(_prefs?.getString(_key));
+
+//   /// スレッドID を更新し、永続化
+//   Future<void> setThreadId(String threadId) async {
+//     state = threadId;
+//     await _prefs?.setString(_key, threadId);
+//   }
+// }
+
+// /// Provider 定義
+// final lastThreadProvider = StateNotifierProvider<LastThreadNotifier, String?>((
+//   ref,
+// ) {
+//   final prefs = ref
+//       .watch(sharedPrefsProvider)
+//       .maybeWhen(data: (p) => p, orElse: () => null);
+//   return LastThreadNotifier(prefs);
+// });
+
+// /// **スレッド管理クラス**
+// class ThreadNotifier extends StateNotifier<List<Thread>> {
+//   ThreadNotifier()
+//     : super([
+//         Thread(id: '1', title: 'Flutterの質問スレッド'),
+//         Thread(id: '2', title: 'Dartの基本を学ぼう'),
+//         Thread(id: '3', title: '初心者向けプログラミング'),
+//         Thread(id: '4', title: 'Flutterで匿名掲示板を作る'),
+//         Thread(id: '5', title: '技術雑談スレッド'),
+//       ]);
+
+//   /// **スレッドを追加**
+//   void addThread(String title, int viewCount, int commentCount) {
+//     final newThread = Thread(
+//       id: '${DateTime.now().millisecondsSinceEpoch}',
+//       title: title,
+//       viewCount: viewCount,
+//       commentCount: commentCount,
+//       createdAt: DateTime.now(),
 //     );
+//     state = [...state, newThread];
+//   }
 
-/// **コメント管理クラス**
-class ThreadCommentsNotifier extends StateNotifier<List<Comment>> {
-  ThreadCommentsNotifier() : super([]);
+//   /// **スレッドのビュー数を増やす**
+//   void incrementViewCount(String title) {
+//     state =
+//         state.map((thread) {
+//           if (thread.title == title) {
+//             return thread.copyWith(viewCount: thread.viewCount + 1);
+//           }
+//           return thread;
+//         }).toList();
+//   }
 
-  /// **コメント追加**
-  void addComment({
-    required int resNumber,
-    required String name,
-    required String email,
-    required String content,
-    required String userId,
-    required DateTime sendTime,
-    List<String>? imageUrl,
-    List<String>? imagePath,
-  }) {
-    final comment = Comment(
-      resNumber: resNumber,
-      name: name,
-      email: email,
-      content: content,
-      userId: userId,
-      sendTime: sendTime,
-      imageUrl: imageUrl ?? [], // 画像URLは必須ではないので、nullの場合は空文字を設定
-      imagePath: imagePath ?? [], // 画像パスもオプション
-    );
-    state = [...state, comment];
-  }
-}
+//   /// **スレッドの書き込み数を増やす**
+//   void incrementCommentCount(String title) {
+//     state =
+//         state.map((thread) {
+//           if (thread.title == title) {
+//             return thread.copyWith(commentCount: thread.commentCount + 1);
+//           }
+//           return thread;
+//         }).toList();
+//   }
+
+//   // **追加**: スレッドの書き込み数を取得する
+//   int getCommentCount(String title) {
+//     return state
+//         .firstWhere(
+//           (thread) => thread.title == title,
+//           orElse: () => Thread(id: '0', title: '', commentCount: 0),
+//         )
+//         .commentCount;
+//   }
+
+//   /// **スレッドの作成日時を取得**
+//   DateTime? getThreadCreatedAt(String title) {
+//     return state
+//         .firstWhere(
+//           (thread) => thread.title == title,
+//           orElse: () => Thread(id: '0', title: '', commentCount: 0),
+//         )
+//         .createdAt;
+//   }
+// }
+
+// /// **スレッドごとのコメント管理**
+// // final threadCommentsProvider =
+// //     StateNotifierProvider.family<ThreadCommentsNotifier, List<Comment>, String>(
+// //       (ref, threadTitle) => ThreadCommentsNotifier(),
+// //     );
+
+// /// **コメント管理クラス**
+// class ThreadCommentsNotifier extends StateNotifier<List<Comment>> {
+//   ThreadCommentsNotifier() : super([]);
+
+//   /// **コメント追加**
+//   void addComment({
+//     required int resNumber,
+//     required String name,
+//     required String email,
+//     required String content,
+//     required String userId,
+//     required DateTime sendTime,
+//     List<String>? imageUrl,
+//     List<String>? imagePath,
+//   }) {
+//     final comment = Comment(
+//       resNumber: resNumber,
+//       name: name,
+//       email: email,
+//       content: content,
+//       userId: userId,
+//       sendTime: sendTime,
+//       imageUrl: imageUrl ?? [], // 画像URLは必須ではないので、nullの場合は空文字を設定
+//       imagePath: imagePath ?? [], // 画像パスもオプション
+//     );
+//     state = [...state, comment];
+//   }
+// }
 
 // Uuid のインスタンスを提供するプロバイダー
 final uuidProvider = Provider<Uuid>((ref) => Uuid());

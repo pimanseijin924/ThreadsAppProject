@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../models/thread_model.dart';
 import '../providers/thread_provider.dart';
 import '../widgets/comment_image_grid.dart';
-import 'post_thread_screen.dart';
 
 class ThreadDetailScreen extends ConsumerWidget {
   final String boardId;
@@ -22,7 +21,13 @@ class ThreadDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final threadAsync = ref.watch(threadByIdProvider(threadId));
-    //final commentsAsync = ref.watch(threadCommentsProvider(threadId));
+
+    // 画面表示時に直近閲覧板を更新
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(lastThreadProvider.notifier)
+          .setLastThread(boardId: boardId, threadId: threadId);
+    });
 
     return threadAsync.when(
       data: (thread) {
@@ -39,7 +44,7 @@ class ThreadDetailScreen extends ConsumerWidget {
             //           },
             //         )
             //         : null,
-            title: Text(thread.title.isNotEmpty ? thread.title : 'スレッド'),
+            title: Text(thread.title.isNotEmpty ? thread.title : '不明なスレッド'),
           ),
           body: commentsAsync.when(
             data:
