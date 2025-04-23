@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:my_app/providers/channel_provider.dart';
 import 'package:my_app/providers/favorite_provider.dart';
+import 'package:my_app/widgets/overlay_list_tile.dart';
 
 class ChannelListScreen extends ConsumerWidget {
   const ChannelListScreen({Key? key}) : super(key: key);
@@ -12,16 +12,6 @@ class ChannelListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final channelList = ref.watch(channelListProvider);
     final favorites = ref.watch(favProvider);
-
-    // // お気に入りチャンネルソート
-    // final channels = channelList.value!;
-    // final sortedChannelList = [
-    //   // (1) お気に入り済みチャンネル（rating>0）を rating 降順で
-    //   ...channels.where((ch) => (favorites[ch.id] ?? 0) > 0).toList()
-    //     ..sort((a, b) => (favorites[b.id]!).compareTo(favorites[a.id]!)),
-    //   // (2) その他のチャンネル
-    //   ...channels.where((ch) => (favorites[ch.id] ?? 0) == 0),
-    // ];
 
     return Scaffold(
       appBar: AppBar(title: Text("チャンネル一覧"), automaticallyImplyLeading: false),
@@ -40,58 +30,10 @@ class ChannelListScreen extends ConsumerWidget {
               final ch = sorted[i];
               final rating = favorites[ch.id] ?? 0;
 
-              return GestureDetector(
-                // 2. 長押しでモーダル表示
-                onLongPress:
-                    () => _showRatingModal(context, ref, ch.id, rating),
-                // 3. 長押し中の左右ドラッグで星評価更新
-                onLongPressMoveUpdate: (details) {
-                  final dx = details.localOffsetFromOrigin.dx;
-                  final newRating =
-                      (dx / MediaQuery.of(context).size.width * 5)
-                          .clamp(1, 5)
-                          .round();
-                  ref.read(favProvider.notifier).update(ch.id, newRating);
-                },
-                child: Container(
-                  // 4. 左端縦線（評価値に応じ色分け)
-                  decoration: BoxDecoration(
-                    border: Border(
-                      left: BorderSide(color: _borderColor(rating), width: 4.0),
-                    ),
-                  ),
-                  child: ListTile(
-                    title: Text(ch.name, style: TextStyle(fontSize: 16)),
-                    subtitle:
-                        ch.description != null
-                            ? Text(
-                              ch.description!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            )
-                            : null,
-                    onTap: () => context.push('/boards/${ch.id}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // 5. 星評価インジケータ
-                        RatingBarIndicator(
-                          rating: rating.toDouble(),
-                          itemBuilder:
-                              (context, index) =>
-                                  Icon(Icons.star, color: Colors.amber),
-                          itemCount: 5,
-                          itemSize: 20.0,
-                          direction: Axis.horizontal,
-                          unratedColor: Colors.grey.shade300,
-                        ),
-                        Icon(Icons.chevron_right),
-                      ],
-                    ),
-                  ),
-                ),
+              return ListTileComponent(
+                contentId: ch.id,
+                contentName: ch.name,
+                contentDescription: ch.description ?? '',
               );
             },
           );
@@ -100,102 +42,6 @@ class ChannelListScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text('エラー: $e')),
       ),
     );
-    // return Scaffold(
-    //   appBar: AppBar(title: Text("チャンネル一覧"), automaticallyImplyLeading: false),
-    //   body: channelList.when(
-    //     data: (channels) {
-    //       final channels = channelList.value!;
-    //       final sorted = [
-    //         ...channels.where((ch) => (favorites[ch.id] ?? 0) > 0).toList()
-    //           ..sort((a, b) => favorites[b.id]!.compareTo(favorites[a.id]!)),
-    //         ...channels.where((ch) => (favorites[ch.id] ?? 0) == 0),
-    //       ];
-
-    //       return ListView.builder(
-    //         itemCount: sorted.length,
-    //         itemBuilder: (context, i) {
-    //           final ch = sorted[i];
-    //           final rating = favorites[ch.id] ?? 0;
-    //           return Container(
-    //             decoration: BoxDecoration(
-    //               border: Border(
-    //                 left: BorderSide(color: _borderColor(rating), width: 4.0),
-    //               ),
-    //             ),
-    //             child: ListTile(
-    //               title: Text(ch.name, style: TextStyle(fontSize: 16)),
-    //               subtitle:
-    //                   ch.description != null
-    //                       ? Text(
-    //                         ch.description!,
-    //                         style: TextStyle(fontSize: 12, color: Colors.grey),
-    //                       )
-    //                       : null,
-    //               onTap: () => context.push('/boards/${ch.id}'),
-    //               trailing: Row(
-    //                 mainAxisSize: MainAxisSize.min,
-    //                 children: [
-    //                   RatingBarIndicator(
-    //                     rating: rating.toDouble(),
-    //                     itemCount: 5,
-    //                     itemSize: 20,
-    //                     direction: Axis.horizontal,
-    //                     itemBuilder:
-    //                         (context, index) =>
-    //                             Icon(Icons.star, color: Colors.amber),
-    //                   ),
-    //                   Icon(Icons.chevron_right),
-    //                 ],
-    //               ),
-    //             ),
-    //           );
-    //         },
-    //       );
-    //     },
-    //     loading: () => Center(child: CircularProgressIndicator()),
-    //     error: (error, stack) => Center(child: Text('エラーが発生しました: $error')),
-    //   ),
-    // );
-    // return GestureDetector(
-    //   onLongPress:
-    //       () => _showRatingModal(context, channel.id, rating, ref),
-    //   onLongPressMoveUpdate: (details) {
-    //     final dx = details.localOffsetFromOrigin.dx;
-    //     final newRating =
-    //         (dx / MediaQuery.of(context).size.width * 5)
-    //             .clamp(1, 5)
-    //             .round();
-    //     ref.read(favProvider.notifier).update(channel.id, newRating);
-    //   },
-    //   child: ListTile(
-    //     title: Text(channel.name, style: TextStyle(fontSize: 16)),
-    //     subtitle:
-    //         channel.description != null
-    //             ? Text(
-    //               channel.description!,
-    //               style: TextStyle(fontSize: 12, color: Colors.grey),
-    //             )
-    //             : null,
-    //     onTap: () {
-    //       context.push('/boards/${channel.id}');
-    //     },
-    //     shape: RoundedRectangleBorder(
-    //       borderRadius: BorderRadius.circular(12),
-    //     ),
-    //     contentPadding: EdgeInsets.symmetric(
-    //       horizontal: 16,
-    //       vertical: 8,
-    //     ),
-    //     trailing: Icon(Icons.chevron_right),
-    //   ),
-    // );
-    //     },
-    //   );
-    // },
-    // loading: () => Center(child: CircularProgressIndicator()),
-    // error: (error, stack) => Center(child: Text('エラーが発生しました: $error')),
-    //   ),
-    // );
   }
 
   Future<void> _showRatingModal(
@@ -277,40 +123,6 @@ class ChannelListScreen extends ConsumerWidget {
       },
     );
   }
-
-  // Future<void> _showRatingModal(
-  //   WidgetRef ref,
-  //   BuildContext ctx,
-  //   String id,
-  //   int current,
-  //
-  // ) {
-  //   return showModalBottomSheet(
-  //     context: ctx,
-  //     builder:
-  //         (_) => Padding(
-  //           padding: const EdgeInsets.all(16),
-  //           child: Column(
-  //             mainAxisSize: MainAxisSize.min,
-  //             children: [
-  //               Text("チャンネルを評価"),
-  //               RatingBar.builder(
-  //                 initialRating: current.toDouble(),
-  //                 minRating: 1,
-  //                 direction: Axis.horizontal,
-  //                 itemCount: 5,
-  //                 itemBuilder:
-  //                     (context, index) => Icon(Icons.star, color: Colors.amber),
-  //                 itemPadding: EdgeInsets.symmetric(horizontal: 4.0),
-  //                 onRatingUpdate:
-  //                     (r) =>
-  //                         ref.read(favProvider.notifier).update(id, r.toInt()),
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //   );
-  // }
 
   Color _borderColor(int rating) {
     switch (rating) {
