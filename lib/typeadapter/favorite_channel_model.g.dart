@@ -1,7 +1,10 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
-import 'package:hive/hive.dart';
-import 'package:my_app/models/favorite_channel_model.dart';
-//part of 'favorite_channel.dart';
+
+part of 'favorite_channel_model.dart';
+
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
 
 class FavoriteChannelAdapter extends TypeAdapter<FavoriteChannel> {
   @override
@@ -11,7 +14,7 @@ class FavoriteChannelAdapter extends TypeAdapter<FavoriteChannel> {
   FavoriteChannel read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
-      for (var i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return FavoriteChannel(
       channelId: fields[0] as String,

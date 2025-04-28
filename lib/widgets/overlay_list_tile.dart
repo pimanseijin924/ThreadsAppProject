@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:my_app/constants/Colors.dart';
+import 'package:my_app/models/thread_model.dart';
 import 'package:my_app/providers/favorite_provider.dart';
 import 'package:my_app/widgets/rating_modal.dart';
 
@@ -10,12 +12,27 @@ class ListTileComponent extends ConsumerStatefulWidget {
   final String contentId;
   final String contentName;
   final String contentDescription;
+  final String type;
+  final String? channelId;
+  final String? boardId;
+  final String? threadId;
+  final Thread? thread;
+  // 外部からオンロングプレスイベントを受け取るコールバック
+  final GestureLongPressStartCallback? onLongPressStart;
+  final GestureLongPressEndCallback? onLongPressEnd;
 
-  ListTileComponent({
+  const ListTileComponent({
     Key? key,
     required this.contentId,
     required this.contentName,
     required this.contentDescription,
+    required this.type,
+    this.channelId,
+    this.boardId,
+    this.threadId,
+    this.thread,
+    this.onLongPressStart,
+    this.onLongPressEnd,
   }) : super(key: key);
 
   @override
@@ -23,92 +40,101 @@ class ListTileComponent extends ConsumerStatefulWidget {
 }
 
 class _ListTileComponentState extends ConsumerState<ListTileComponent> {
-  OverlayEntry? _overlayEntry;
+  //OverlayEntry? _overlayEntry;
   bool _isDragging = false;
 
-  @override
-  void dispose() {
-    // 画面を離れるタイミングで必ずオーバーレイを削除
-    _overlayEntry?.remove();
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   _overlayEntry?.remove();
+  //   super.dispose();
+  // }
 
-  // オーバーレイ挿入
-  void _insertOverlay() {
-    _overlayEntry?.remove();
-    // OverlayEntryを新規作成。builderで評価UIを定義。maintainState=trueで状態を保持
-    _overlayEntry = OverlayEntry(
-      builder: (context) {
-        return Positioned.fill(
-          child: Material(
-            color: Colors.black.withOpacity(0.1),
-            child: Center(
-              child: Consumer(
-                builder: (ctx, ref, _) {
-                  final rating = ref.watch(favProvider)[widget.contentId] ?? 0;
-                  return RatingBarIndicator(
-                    rating: rating.toDouble(),
-                    itemBuilder:
-                        (ctx, _) => Icon(Icons.star, color: Colors.amber),
-                    itemCount: 5,
-                    itemSize: 32,
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
-    );
-    // 現在のOverlayにエントリを挿入
-    Overlay.of(context)!.insert(_overlayEntry!);
-  }
+  // void _insertOverlay() {
+  //   _overlayEntry?.remove();
+  //   _overlayEntry = OverlayEntry(
+  //     builder: (context) {
+  //       final rating = ref.watch(favProvider)[widget.contentId] ?? 0;
+  //       return Positioned.fill(
+  //         child: Material(
+  //           color: Colors.black.withOpacity(0.1),
+  //           child: Center(
+  //             child: Consumer(
+  //               builder: (ctx, ref, _) {
+  //                 final rating = ref.watch(favProvider)[widget.contentId] ?? 0;
+  //                 return RatingBarIndicator(
+  //                   rating: rating.toDouble(),
+  //                   itemBuilder:
+  //                       (ctx, _) => Icon(Icons.star, color: Colors.amber),
+  //                   itemCount: 5,
+  //                   itemSize: 32,
+  //                 );
+  //               },
+  //             ),
+  //           ),
+  //         ),
+  //       );
+  //     },
+  //   );
+  //   Overlay.of(context)!.insert(_overlayEntry!);
+  // }
 
-  @override
-  void initState() {
-    super.initState();
-    // プロバイダ更新を監視してリビルド
-    ref.listen<Map<String, int>>(favProvider, (_, __) {
-      _overlayEntry?.markNeedsBuild();
-    });
-  }
-
-  // オーバーレイ削除
-  void _removeOverlay() {
-    // remove()を呼ぶとOverlayEntryがOverlayから外れる
-    _overlayEntry?.remove();
-    _overlayEntry = null; // 参照をクリアしてGCを促進
-  }
+  // void _removeOverlay() {
+  //   _overlayEntry?.remove();
+  //   _overlayEntry = null;
+  // }
 
   @override
   Widget build(BuildContext context) {
     final rating = ref.watch(
       favProvider.select((m) => m[widget.contentId] ?? 0),
     );
+
+    final updateActions = <String, void Function(int)>{
+      'channel':
+          (r) => ref
+              .read(favProvider.notifier)
+              .updateFavChannel(widget.contentId, r),
+      'board':
+          (r) => ref
+              .read(favProvider.notifier)
+              .updateFavBoard(widget.contentId, r),
+      'thread':
+          (r) => ref
+              .read(favProvider.notifier)
+              .updateFavThread(widget.contentId, r),
+    };
+
     return GestureDetector(
-      // 長押し開始でオーバーレイを表示
-      onLongPressStart: (details) {
+      // onLongPressStart: (details) {
+      //   _isDragging = false;
+      //   _insertOverlay();
+      //   widget.onLongPressStart?.call(details);
+      // },
+      onLongPressStart: (d) {
         _isDragging = false;
-        _insertOverlay();
+        widget.onLongPressStart?.call(d);
       },
-      // 長押し中の横スワイプで評価更新
       onLongPressMoveUpdate: (details) {
         _isDragging = true;
         final dx = details.localOffsetFromOrigin.dx * 3;
         final newRating =
             (dx / MediaQuery.of(context).size.width * 5).clamp(1, 5).round();
-        ref.read(favProvider.notifier).update(widget.contentId, newRating);
+        updateActions[widget.type]?.call(newRating);
       },
-      // 長押し終了時に分岐
-      onLongPressEnd: (details) {
-        _removeOverlay();
+      // onLongPressEnd: (details) {
+      //   _removeOverlay();
+      //   if (!_isDragging) {
+      //     showRatingModal(context, ref, widget.contentId, rating, widget.type);
+      //   }
+      //   widget.onLongPressEnd?.call(details);
+      // },
+      onLongPressEnd: (d) {
         if (!_isDragging) {
-          // ドラッグなし → 通常モーダル
-          showRatingModal(context, ref, widget.contentId, rating);
+          showRatingModal(context, ref, widget.contentId, rating, widget.type);
         }
+        widget.onLongPressEnd!.call(d);
       },
       child: Container(
-        // 4. 左端縦線（評価値に応じ色分け)
         decoration: BoxDecoration(
           border: Border(
             left: BorderSide(color: borderColor(rating), width: 4.0),
@@ -116,22 +142,69 @@ class _ListTileComponentState extends ConsumerState<ListTileComponent> {
         ),
         child: ListTile(
           title: Text(widget.contentName, style: TextStyle(fontSize: 16)),
-          subtitle:
-              widget.contentDescription != null
+          subtitle: switch (widget.type) {
+            'thread' => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      '閲覧数: ${widget.thread!.viewCount}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    SizedBox(width: 16),
+                    Text(
+                      '書き込み数: ${widget.thread!.commentCount}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                if (widget.thread!.createdAt != null)
+                  Text(
+                    '作成日時: ${DateFormat('yy/MM/dd HH:mm:ss.SS').format(widget.thread!.createdAt!)}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+              ],
+            ),
+            'board' =>
+              widget.contentDescription.isNotEmpty
                   ? Text(
-                    widget.contentDescription!,
+                    widget.contentDescription,
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   )
                   : null,
-          onTap: () => context.push('/boards/${widget.contentId}'),
+            'channel' =>
+              widget.contentDescription.isNotEmpty
+                  ? Text(
+                    widget.contentDescription,
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  )
+                  : null,
+            _ => null,
+          },
+          onTap: () {
+            switch (widget.type) {
+              case 'channel':
+                context.push('/boards/${widget.contentId}');
+                break;
+              case 'board':
+                context.push('/threads/${widget.contentId}');
+                break;
+              case 'thread':
+                context.push('/thread/${widget.boardId}/${widget.threadId}');
+                break;
+              default:
+                break;
+            }
+          },
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 5. 星評価インジケータ
               RatingBarIndicator(
                 rating: rating.toDouble(),
                 itemBuilder:
-                    (context, index) => Icon(Icons.star, color: Colors.amber),
+                    (context, _) => Icon(Icons.star, color: Colors.amber),
                 itemCount: 5,
                 itemSize: 20.0,
                 direction: Axis.horizontal,
@@ -145,11 +218,259 @@ class _ListTileComponentState extends ConsumerState<ListTileComponent> {
     );
   }
 
-  // ドラッグアップデートによる評価変更処理
-  void _handleDragUpdate(LongPressMoveUpdateDetails details) {
-    final dx = details.localOffsetFromOrigin.dx;
-    final newRating =
-        (dx / MediaQuery.of(context).size.width * 5).clamp(1, 5).round();
-    ref.read(favProvider.notifier).update(widget.contentId, newRating);
+  Color borderColor(int rating) {
+    switch (rating) {
+      case 5:
+        return Colors.red;
+      case 4:
+        return Colors.orange;
+      case 3:
+        return Colors.yellow;
+      case 2:
+        return Colors.green;
+      case 1:
+        return Colors.blue;
+      default:
+        return Colors.transparent;
+    }
   }
 }
+
+// import 'package:flutter/material.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:go_router/go_router.dart';
+// import 'package:intl/intl.dart';
+// import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+// import 'package:my_app/constants/Colors.dart';
+// import 'package:my_app/models/thread_model.dart';
+// import 'package:my_app/providers/favorite_provider.dart';
+// import 'package:my_app/widgets/rating_modal.dart';
+
+// class ListTileComponent extends ConsumerStatefulWidget {
+//   final String contentId;
+//   final String contentName;
+//   final String contentDescription;
+//   final String type;
+//   // ページ遷移の処理のために暫定的に保持するパラメータ
+//   final String? channelId;
+//   final String? boardId;
+//   final String? threadId;
+//   final Thread? thread;
+
+//   ListTileComponent({
+//     Key? key,
+//     required this.contentId,
+//     required this.contentName,
+//     required this.contentDescription,
+//     required this.type,
+//     this.channelId,
+//     this.boardId,
+//     this.threadId,
+//     this.thread,
+//   }) : super(key: key);
+
+//   @override
+//   ConsumerState<ListTileComponent> createState() => _ListTileComponentState();
+// }
+
+// class _ListTileComponentState extends ConsumerState<ListTileComponent> {
+//   OverlayEntry? _overlayEntry;
+//   bool _isDragging = false;
+
+//   @override
+//   void dispose() {
+//     // 画面を離れるタイミングで必ずオーバーレイを削除
+//     _overlayEntry?.remove();
+//     super.dispose();
+//   }
+
+//   // オーバーレイ挿入
+//   void _insertOverlay() {
+//     _overlayEntry?.remove();
+//     // OverlayEntryを新規作成。builderで評価UIを定義。maintainState=trueで状態を保持
+//     _overlayEntry = OverlayEntry(
+//       builder: (context) {
+//         return Positioned.fill(
+//           child: Material(
+//             color: Colors.black.withOpacity(0.1),
+//             child: Center(
+//               child: Consumer(
+//                 builder: (ctx, ref, _) {
+//                   final rating = ref.watch(favProvider)[widget.contentId] ?? 0;
+//                   return RatingBarIndicator(
+//                     rating: rating.toDouble(),
+//                     itemBuilder:
+//                         (ctx, _) => Icon(Icons.star, color: Colors.amber),
+//                     itemCount: 5,
+//                     itemSize: 32,
+//                   );
+//                 },
+//               ),
+//             ),
+//           ),
+//         );
+//       },
+//     );
+//     // 現在のOverlayにエントリを挿入
+//     Overlay.of(context)!.insert(_overlayEntry!);
+//   }
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     // プロバイダ更新を監視してリビルド
+//     // ref.listen<Map<String, int>>(favProvider, (_, __) {
+//     //   _overlayEntry?.markNeedsBuild();
+//     // });
+//     // build外でも安全に呼べる listenManual で一度だけ登録
+//     ref.listenManual<Map<String, int>>(
+//       favProvider,
+//       (_, __) => _overlayEntry?.markNeedsBuild(),
+//       fireImmediately: false, // 初期値で発火させたくない場合
+//     );
+//   }
+
+//   // オーバーレイ削除
+//   void _removeOverlay() {
+//     // remove()を呼ぶとOverlayEntryがOverlayから外れる
+//     _overlayEntry?.remove();
+//     _overlayEntry = null; // 参照をクリアしてGCを促進
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     // プロバイダ更新を監視してリビルド
+//     // ref.listen<Map<String, int>>(favProvider, (_, __) {
+//     //   _overlayEntry?.markNeedsBuild();
+//     // });
+//     final rating = ref.watch(
+//       favProvider.select((m) => m[widget.contentId] ?? 0),
+//     );
+
+//     final updateActions = <String, void Function(int)>{
+//       'channel':
+//           (rating) => ref
+//               .read(favProvider.notifier)
+//               .updateFavChannel(widget.contentId, rating),
+//       'board':
+//           (rating) => ref
+//               .read(favProvider.notifier)
+//               .updateFavBoard(widget.contentId, rating),
+//       'thread':
+//           (rating) => ref
+//               .read(favProvider.notifier)
+//               .updateFavThread(widget.contentId, rating),
+//     };
+
+//     return GestureDetector(
+//       // 長押し開始でオーバーレイを表示
+//       onLongPressStart: (details) {
+//         _isDragging = false;
+//         _insertOverlay();
+//       },
+//       // 長押し中の横スワイプで評価更新
+//       onLongPressMoveUpdate: (details) {
+//         _isDragging = true;
+//         final dx = details.localOffsetFromOrigin.dx * 3;
+//         final newRating =
+//             (dx / MediaQuery.of(context).size.width * 5).clamp(1, 5).round();
+//         // マップから取り出してコール。キーが無ければ no-op
+//         updateActions[widget.type]?.call(newRating);
+//       },
+//       // 長押し終了時に分岐
+//       onLongPressEnd: (details) {
+//         _removeOverlay();
+//         if (!_isDragging) {
+//           // ドラッグなし → 通常モーダル
+//           showRatingModal(context, ref, widget.contentId, rating, widget.type);
+//         }
+//       },
+//       child: Container(
+//         // 4. 左端縦線（評価値に応じ色分け)
+//         decoration: BoxDecoration(
+//           border: Border(
+//             left: BorderSide(color: borderColor(rating), width: 4.0),
+//           ),
+//         ),
+//         child: ListTile(
+//           title: Text(widget.contentName, style: TextStyle(fontSize: 16)),
+//           subtitle: switch (widget.type) {
+//             'thread' => Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 SizedBox(height: 4),
+//                 Row(
+//                   children: [
+//                     Text(
+//                       '閲覧数: ${widget.thread!.viewCount}',
+//                       style: TextStyle(fontSize: 12, color: Colors.grey),
+//                     ),
+//                     SizedBox(width: 16),
+//                     Text(
+//                       '書き込み数: ${widget.thread!.commentCount}',
+//                       style: TextStyle(fontSize: 12, color: Colors.grey),
+//                     ),
+//                   ],
+//                 ),
+//                 if (widget.thread!.createdAt != null)
+//                   Text(
+//                     '作成日時: ${DateFormat('yy/MM/dd HH:mm:ss.SS').format(widget.thread!.createdAt)}',
+//                     style: TextStyle(fontSize: 12, color: Colors.grey),
+//                   ),
+//               ],
+//             ),
+//             'board' =>
+//               widget.contentDescription != null
+//                   ? Text(
+//                     widget.contentDescription!,
+//                     style: TextStyle(fontSize: 12, color: Colors.grey),
+//                   )
+//                   : null,
+//             'channel' =>
+//               widget.contentDescription != null
+//                   ? Text(
+//                     widget.contentDescription!,
+//                     style: TextStyle(fontSize: 12, color: Colors.grey),
+//                   )
+//                   : null,
+//             _ => Center(child: Text('ページ遷移エラー')),
+//           },
+
+//           onTap: () {
+//             switch (widget.type) {
+//               case 'channel':
+//                 context.push('/boards/${widget.contentId}');
+//                 break;
+//               case 'board':
+//                 context.push('/threads/${widget.contentId}');
+//                 break;
+//               case 'thread':
+//                 context.push('/thread/${widget.boardId}/${widget.threadId}');
+//                 break;
+//               default:
+//                 print('ページ遷移エラー_ページタイプ認識エラー:${widget.type}');
+//                 break;
+//             }
+//           },
+//           //() => context.push('/boards/${widget.contentId}'),
+//           trailing: Row(
+//             mainAxisSize: MainAxisSize.min,
+//             children: [
+//               // 5. 星評価インジケータ
+//               RatingBarIndicator(
+//                 rating: rating.toDouble(),
+//                 itemBuilder:
+//                     (context, index) => Icon(Icons.star, color: Colors.amber),
+//                 itemCount: 5,
+//                 itemSize: 20.0,
+//                 direction: Axis.horizontal,
+//                 unratedColor: Colors.grey.shade300,
+//               ),
+//               Icon(Icons.chevron_right),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }

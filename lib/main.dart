@@ -1,11 +1,9 @@
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:my_app/router/router.dart';
-import 'package:my_app/models/favorite_channel_model.dart';
-import 'package:my_app/models/favorite_channel_model.g.dart';
+import 'package:my_app/utils/init_hive.dart';
 
 // テーマプロバイダ（明るい・暗いテーマを切り替え）
 final themeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
@@ -16,9 +14,7 @@ final localeProvider = StateProvider<Locale>((ref) => Locale('ja', 'JP'));
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  await Hive.initFlutter();
-  Hive.registerAdapter(FavoriteChannelAdapter());
-  await Hive.openBox<FavoriteChannel>('favorites');
+  await UtilsHive.initHive();
   runApp(ProviderScope(child: AnonymousBoardApp()));
 }
 
