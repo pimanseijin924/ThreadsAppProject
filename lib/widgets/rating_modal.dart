@@ -12,10 +12,8 @@ Future<void> showRatingModal(
 ) {
   return showModalBottomSheet(
     context: context,
-    isScrollControlled:
-        true, // 全画面的に操作を受け付ける :contentReference[oaicite:5]{index=5}
-    enableDrag:
-        false, // 下方向スワイプで閉じないように制御 :contentReference[oaicite:6]{index=6}
+    isScrollControlled: true, // 全画面的に操作を受け付ける
+    enableDrag: false, // 下方向スワイプで閉じないように制御
     builder: (_) {
       return ProviderScope(
         child: Consumer(
@@ -43,10 +41,11 @@ Future<void> showRatingModal(
                   children: [
                     Text("チャンネルを評価"),
                     SizedBox(height: 12),
-                    // 星評価を表示 :contentReference[oaicite:9]{index=9}
+                    // 星評価を表示
                     RatingBar.builder(
                       initialRating: currentRating.toDouble(),
-                      minRating: 1,
+                      minRating: 0,
+                      maxRating: 5,
                       direction: Axis.horizontal,
                       itemCount: 5,
                       itemBuilder:
@@ -71,51 +70,3 @@ Future<void> showRatingModal(
     },
   );
 }
-      // double startDx = 0;
-      // return StatefulBuilder(
-      //   builder: (ctx, setState) {
-      //     final updateActions = <String, void Function(int)>{
-      //       'channel':
-      //           (rating) =>
-      //               ref.read(favProvider.notifier).updateFavChannel(id, rating),
-      //       'board':
-      //           (rating) =>
-      //               ref.read(favProvider.notifier).updateFavBoard(id, rating),
-      //       'thread':
-      //           (rating) =>
-      //               ref.read(favProvider.notifier).updateFavThread(id, rating),
-      //     };
-      //     int rating = currentRating;
-      //     return GestureDetector(
-      //       child: Container(
-      //         padding: EdgeInsets.all(16),
-      //         width: double.infinity,
-      //         child: Column(
-      //           mainAxisSize: MainAxisSize.min,
-      //           children: [
-      //             Text("チャンネルを評価"),
-      //             SizedBox(height: 12),
-      //             // 星評価を表示 :contentReference[oaicite:9]{index=9}
-      //             RatingBar.builder(
-      //               initialRating: currentRating.toDouble(),
-      //               minRating: 1,
-      //               direction: Axis.horizontal,
-      //               itemCount: 5,
-      //               itemBuilder:
-      //                   (context, index) =>
-      //                       Icon(Icons.star, color: Colors.amber),
-      //               itemPadding: EdgeInsets.symmetric(horizontal: 4.0),
-      //               onRatingUpdate: (r) {
-      //                 final rating = r.toInt();
-      //                 // マップから取り出してコール。キーが無ければ no-op
-      //                 updateActions[type]?.call(rating);
-      //               },
-      //             ),
-      //             SizedBox(height: 8),
-      //             Text("左右にスワイプして評価を調整"),
-      //           ],
-      //         ),
-      //       ),
-      //     );
-      //   },
-      // );

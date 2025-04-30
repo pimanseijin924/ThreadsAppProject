@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,19 @@ final userIdProvider = FutureProvider<String>((ref) async {
 // 許可される文字セット
 const String _allowedChars =
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+*-/!';
+
+// 公開IPを取得する(api.ipify.orgを使用)
+Future<String> _fetchPublicIp() async {
+  final response = await http.get(
+    Uri.parse('https://api.ipify.org?format=json'),
+  );
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    return data['ip'] as String;
+  } else {
+    throw Exception('IPアドレス取得失敗: ${response.statusCode}');
+  }
+}
 
 /// ユーザーIDを取得 or 生成するメソッド
 Future<String> getUserId() async {
@@ -28,10 +43,12 @@ Future<String> getUserId() async {
 
   // 日付が変わった or IDが未設定なら新しいIDを生成
   if (savedDate != todayKey || savedId == null) {
-    final newUserId = _generateUserId(deviceId);
-    await prefs.setString('user_id', newUserId);
+    final ip = await _fetchPublicIp();
+    final newId = _generateFromIp(ip, todayKey);
+    //final newUserId = _generateUserId(deviceId);
+    await prefs.setString('user_id', newId);
     await prefs.setString('user_id_date', todayKey);
-    return newUserId;
+    return newId;
   }
 
   return savedId;
@@ -47,4 +64,31 @@ String _generateUserId(String uuid) {
     13,
     (index) => _allowedChars[random.nextInt(_allowedChars.length)],
   ).join();
+}
+
+// IPアドレスと日付をもとに匿名IDを生成
+String _generateFromIp(String ip, String dateKey) {
+  // IP+日付のハッシュをシードにしてRandomを初期化
+  final seed = ip.hashCode ^ dateKey.hashCode;
+  final random = Random(seed);
+  //16文字分ランダムに選んで結合
+  return List.generate(
+    16,
+    (_) => _allowedChars[random.nextInt(_allowedChars.length)],
+  ).join();
+}
+
+// 設計した外部APIを利用してIPからIDを生成
+Future<String> fetchAnonymousId() async {
+  final url = Uri.parse(
+    "https://us-central1-threadappproject.cloudfunctions.net/getAnonymousId",
+  );
+  final response = await http.get(url);
+
+  if (response.statusCode == 200) {
+    final json = jsonDecode(response.body);
+    return json["displayId"];
+  } else {
+    throw Exception("匿名IDの取得に失敗しました");
+  }
 }

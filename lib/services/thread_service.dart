@@ -85,28 +85,6 @@ class CreateThreadService {
     // 自動生成IDを取得
     docRefId = docRef.id;
 
-    // await _firestore.runTransaction((transaction) async {
-    //   //  add() でドキュメントを追加（自動生成 ID）
-    //   final docRef = await colRef.add({
-    //     'title': title,
-    //     'createdAt': FieldValue.serverTimestamp(),
-    //     'boardIds': boardIds,
-    //     'viewCount': 0,
-    //     'commentCount': 0,
-    //     'maxCommentCount': maxCommentCount,
-    //     'limitType': limitType,
-    //     'commentDeadline':
-    //         commentDeadline ??
-    //         DateTime.now().add(Duration(days: 365 * 100)), // デフォルトは100年後
-    //   });
-
-    //   // ドキュメントのIDを取得して、ドキュメントに保存
-    //   transaction.set(docRef, {'id': docRef.id}, SetOptions(merge: true));
-
-    //   // 自動生成IDを取得
-    //   docRefId = docRef.id;
-    // });
-
     // 自動生成IDを取得
     return docRefId;
   }

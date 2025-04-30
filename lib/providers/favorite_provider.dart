@@ -15,19 +15,19 @@ class FavoriteNotifier extends StateNotifier<Map<String, int>> {
   Future<void> _loadFavChannels() async {
     final box = Hive.box<FavoriteChannel>('favorite_channels');
     final map = {for (var fc in box.values) fc.channelId: fc.rating};
-    state = map;
+    state = {...state, ...map};
   }
 
   Future<void> _loadFavBoards() async {
     final box = Hive.box<FavoriteBoard>('favorite_boards');
     final map = {for (var fc in box.values) fc.boardId: fc.rating};
-    state = map;
+    state = {...state, ...map};
   }
 
   Future<void> _loadFavThreads() async {
     final box = Hive.box<FavoriteThread>('favorite_threads');
     final map = {for (var fc in box.values) fc.threadId: fc.rating};
-    state = map;
+    state = {...state, ...map};
   }
 
   Future<void> updateFavChannel(String id, int rating) async {

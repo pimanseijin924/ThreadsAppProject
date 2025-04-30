@@ -128,7 +128,7 @@ class _ChannelListScreenState extends ConsumerState<ChannelListScreen> {
       ),
       body: channelListAsync.when(
         data: (channelList) {
-          // お気に入りを先頭に評価降順でソート
+          // お気に入りを先頭に評価降順でソートm
           final sorted = [
             ...channelList.where((ch) => (favorites[ch.id] ?? 0) > 0).toList()
               ..sort((a, b) => favorites[b.id]!.compareTo(favorites[a.id]!)),
