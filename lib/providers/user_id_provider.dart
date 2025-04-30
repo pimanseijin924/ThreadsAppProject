@@ -39,7 +39,10 @@ Future<String> getUserId() async {
 
 // UUIDを元にランダムなIDを生成
 String _generateUserId(String uuid) {
-  final random = Random(uuid.hashCode); // UUIDのハッシュ値を使ってシードを設定
+  // UUIDのハッシュ値を使ってシードを設定
+  //final random = Random(uuid.hashCode);
+  //　NOTE:ID生成方法：UUIDに依存せず完全にランダムにする
+  final random = Random(); //
   return List.generate(
     13,
     (index) => _allowedChars[random.nextInt(_allowedChars.length)],

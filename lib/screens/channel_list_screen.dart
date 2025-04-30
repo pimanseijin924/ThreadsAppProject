@@ -19,6 +19,8 @@ class ChannelListScreen extends ConsumerStatefulWidget {
 class _ChannelListScreenState extends ConsumerState<ChannelListScreen> {
   OverlayEntry? _overlayEntry;
   List<Channel>? _stableSorted;
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -29,6 +31,8 @@ class _ChannelListScreenState extends ConsumerState<ChannelListScreen> {
       (prev, channelId) => _toggleOverlay(channelId),
       fireImmediately: false,
     );
+    // 検索キーの変更を監視
+    _searchController.addListener(() => setState(() {}));
   }
 
   @override
@@ -88,29 +92,62 @@ class _ChannelListScreenState extends ConsumerState<ChannelListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final asyncChannels = ref.watch(channelListProvider);
+    final channelListAsync = ref.watch(channelListProvider);
     final favorites = ref.watch(favProvider);
     final activeOverlayId = ref.watch(activeChannelOverlayProvider);
+    final query = _searchController.text.trim().toLowerCase();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('チャンネル一覧'),
+        title:
+            _isSearching
+                ? TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'チャンネルを検索',
+                    border: InputBorder.none,
+                  ),
+                  style: const TextStyle(color: Colors.black, fontSize: 18),
+                )
+                : const Text('チャンネル一覧'),
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                if (_isSearching) {
+                  _searchController.clear();
+                }
+                _isSearching = !_isSearching;
+              });
+            },
+          ),
+        ],
       ),
-      body: asyncChannels.when(
-        data: (channels) {
+      body: channelListAsync.when(
+        data: (channelList) {
           // お気に入りを先頭に評価降順でソート
           final sorted = [
-            ...channels.where((ch) => (favorites[ch.id] ?? 0) > 0).toList()
+            ...channelList.where((ch) => (favorites[ch.id] ?? 0) > 0).toList()
               ..sort((a, b) => favorites[b.id]!.compareTo(favorites[a.id]!)),
-            ...channels.where((ch) => (favorites[ch.id] ?? 0) == 0),
+            ...channelList.where((ch) => (favorites[ch.id] ?? 0) == 0),
           ];
+
+          // フィルタ：検索クエリと一致するもののみ
+          final filtered =
+              query.isEmpty
+                  ? sorted
+                  : sorted
+                      .where((ch) => ch.name.toLowerCase().contains(query))
+                      .toList();
 
           // ドラッグ中はソートリストを固定
           final displayList =
               (activeOverlayId != null && _stableSorted != null)
                   ? _stableSorted!
-                  : sorted;
+                  : filtered;
 
           return ListView.builder(
             itemCount: displayList.length,
