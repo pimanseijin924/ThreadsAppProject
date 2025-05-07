@@ -14,6 +14,11 @@ final boardListProvider = StreamProvider.family<List<Board>, String>((
         final boardIds =
             snapshot.docs.map((doc) => doc['boardId'] as String).toList();
 
+        // boardIds が空なら、空リストを返してクエリをスキップ
+        if (boardIds.isEmpty) {
+          return <Board>[];
+        }
+
         // boardId のリストに基づいて boards コレクションを取得
         final boardSnapshots =
             await FirebaseFirestore.instance

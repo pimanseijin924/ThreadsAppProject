@@ -12,11 +12,6 @@ final firestoreProvider = Provider<FirebaseFirestore>((ref) {
   return FirebaseFirestore.instance;
 });
 
-/// **スレッド全体を管理するプロバイダー**
-// final threadProvider = StateNotifierProvider<ThreadNotifier, List<Thread>>(
-//   (ref) => ThreadNotifier(),
-// );
-
 /// 指定された boardId に属するスレッド一覧を取得する StreamProvider
 final boardThreadsProvider = StreamProvider.family<List<Thread>, String>((
   ref,
@@ -38,9 +33,11 @@ final boardThreadsProvider = StreamProvider.family<List<Thread>, String>((
             viewCount: data['viewCount'],
             createdAt: (data['createdAt'] as Timestamp).toDate(),
             commentCount: data['commentCount'] ?? 0,
-            maxCommentCount: data['maxCommentCount'] ?? 1000,
             limitType: data['limitType'] ?? 'count',
+            maxCommentCount: data['maxCommentCount'] ?? 1000,
             commentDeadline: (data['commentDeadline'] as Timestamp?)?.toDate(),
+            isDat: data['isDat'] ?? false,
+            label: data['label'] ?? '',
           );
         }).toList();
       });

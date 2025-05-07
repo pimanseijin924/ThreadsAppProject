@@ -42,7 +42,8 @@ class _PostFormState extends ConsumerState<PostForm> {
       context,
       ref,
       widget.userId,
-      widget.thread ?? Thread(id: '', title: ''),
+      widget.thread ??
+          Thread(id: '', title: '', createdAt: DateTime.now(), isDat: false),
     );
   }
 
