@@ -49,3 +49,4 @@ app.*.map.json
 ".packages" 
 "pubspec.lock" 
 "ios/Pods/" 
+"android/key.properties"

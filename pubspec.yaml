@@ -33,6 +33,8 @@ dependencies:
   hive: ^2.2.3            # Lightweight key-value データベース :contentReference[oaicite:0]{index=0}
   hive_flutter: ^1.1.0    # Flutter での Hive 初期化やバインディングを簡単にする拡張 :contentReference[oaicite:1]{index=1}
   flutter_rating_bar: ^4.0.0 # 星評価ウィジェット
+  #google_mobile_ads: ^3.0.0
+  
 
   
 
@@ -42,6 +44,8 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   hive_generator: ^1.1.0  # TypeAdapter の自動生成に必要 :contentReference[oaicite:2]{index=2}
   build_runner: ^2.3.3    # コード生成ツール
+  change_app_package_name: ^1.5.0 # Android アプリのパッケージ名変更ツール
+  flutter_launcher_icons: ^0.13.1 # アイコン生成ツール
 
 flutter:
   generate: true

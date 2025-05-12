@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
-import '../models/thread_model.dart';
-import '../providers/thread_provider.dart';
-import '../widgets/comment_image_grid.dart';
+import 'package:my_app/models/thread_model.dart';
+import 'package:my_app/models/comment_model.dart';
+import 'package:my_app/providers/thread_provider.dart';
+import 'package:my_app/providers/ng_provider.dart';
+import 'package:my_app/widgets/comment_image_grid.dart';
 
 class ThreadDetailScreen extends ConsumerWidget {
   final String boardId;
   final String threadId;
   final bool showBackToTab; // スレッド一覧画面に戻るボタンを表示するかどうか
+  OverlayEntry? _idOverlay;
 
-  const ThreadDetailScreen({
+  ThreadDetailScreen({
     Key? key,
     required this.boardId,
     required this.threadId,
@@ -35,15 +38,6 @@ class ThreadDetailScreen extends ConsumerWidget {
 
         return Scaffold(
           appBar: AppBar(
-            // leading:
-            //     showBackToTab
-            //         ? IconButton(
-            //           icon: Icon(Icons.arrow_back),
-            //           onPressed: () {
-            //             context.push('/threads/$boardId');
-            //           },
-            //         )
-            //         : null,
             title: Text(thread.title.isNotEmpty ? thread.title : '不明なスレッド'),
           ),
           body: commentsAsync.when(
@@ -85,6 +79,12 @@ class ThreadDetailScreen extends ConsumerWidget {
                                 itemCount: comments.length,
                                 itemBuilder: (context, index) {
                                   final comment = comments[index];
+                                  final writerId = comment.userId;
+
+                                  // NGリストを読み込んで、該当IDならここでスキップ
+                                  final ngId = ref.watch(ngIdProvider);
+                                  if (ngId.contains(writerId))
+                                    return SizedBox.shrink();
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8.0,
@@ -127,11 +127,26 @@ class ThreadDetailScreen extends ConsumerWidget {
                                             ),
                                           ],
                                         ),
-                                        Text(
-                                          'ID: ${comment.userId}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey,
+                                        GestureDetector(
+                                          onTap:
+                                              () => _showIdOverlay(
+                                                context,
+                                                ref,
+                                                writerId,
+                                                comments,
+                                              ),
+                                          onLongPress:
+                                              () => _showNgModal(
+                                                context,
+                                                ref,
+                                                writerId,
+                                              ),
+                                          child: Text(
+                                            'ID: ${comment.userId}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                            ),
                                           ),
                                         ),
                                         Text(comment.content),
@@ -196,6 +211,147 @@ class ThreadDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  // 指定IDのコメント一覧をオーバーレイで表示
+  void _showIdOverlay(
+    BuildContext context,
+    WidgetRef ref,
+    String id,
+    List<Comment> comments,
+  ) {
+    _removeIdOverlay();
+    final filtered = comments.where((comment) => comment.userId == id).toList();
+
+    _idOverlay = OverlayEntry(
+      builder: (ctx) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: _removeIdOverlay,
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+            Center(
+              child: Container(
+                width: 300,
+                height: 400,
+                padding: EdgeInsets.all(8),
+                color: Colors.white,
+                child: ListView.builder(
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final comment = filtered[index];
+                    final writerId = comment.userId;
+
+                    // NGリストを読み込んで、該当IDならここでスキップ
+                    final ngId = ref.watch(ngIdProvider);
+                    if (ngId.contains(writerId)) return SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8.0,
+                        vertical: 4.0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                '${comment.resNumber} ',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                comment.name.isNotEmpty
+                                    ? comment.name
+                                    : 'ななしさん',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              if (comment.email != null &&
+                                  comment.email.isNotEmpty)
+                                Text(
+                                  ' <${comment.email}>',
+                                  style: TextStyle(color: Colors.blue),
+                                ),
+                              Spacer(),
+                              Text(
+                                DateFormat(
+                                  'yy/MM/dd HH:mm:ss.SS',
+                                ).format(comment.sendTime),
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                          GestureDetector(
+                            onTap:
+                                () => _showIdOverlay(
+                                  context,
+                                  ref,
+                                  writerId,
+                                  comments,
+                                ),
+                            onLongPress:
+                                () => _showNgModal(context, ref, writerId),
+                            child: Text(
+                              'ID: ${comment.userId}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                          Text(comment.content),
+                          if (comment.imageUrl != null &&
+                              comment.imageUrl!.isNotEmpty)
+                            CommentImageGrid(imageUrls: comment.imageUrl!),
+                          Divider(),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    Overlay.of(context)!.insert(_idOverlay!);
+  }
+
+  void _removeIdOverlay() {
+    _idOverlay?.remove();
+    _idOverlay = null;
+  }
+
+  void _showNgModal(BuildContext context, WidgetRef ref, String id) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(title: Text('Id: $id')),
+              ListTile(
+                leading: Icon(Icons.block),
+                title: Text('このIDをNGに登録'),
+                onTap: () {
+                  ref.read(ngIdProvider.notifier).add(id);
+                  context.pop();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.cancel),
+                title: Text('キャンセル'),
+                onTap: () => context.pop(),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

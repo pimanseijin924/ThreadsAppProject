@@ -1,8 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:uuid/uuid.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
-// スレッドにコメントを追加するためのサービス
 class AddCommentService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  /// デバイスのUUID取得（例として device_info_plus パッケージ使用）
+  Future<String> _getDeviceUuid() async {
+    final deviceInfo = DeviceInfoPlugin();
+    final info = await deviceInfo.androidInfo; // Androidの場合
+    // iOSの場合は iOS用の処理に切り替えてください
+    return info.id ?? Uuid().v4();
+  }
 
   Future<void> addComment({
     required String threadId,
@@ -11,26 +20,68 @@ class AddCommentService {
     required String writerEmail,
     required String content,
     List<String>? imageUrls,
+    String? clientIp, // IPアドレスを渡せるなら引数に
   }) async {
     final threadDocRef = _firestore.collection('threads').doc(threadId);
+    final userDocRef = _firestore.collection('users').doc(writerId);
     final commentsCollectionRef = threadDocRef.collection('comments');
 
     await _firestore.runTransaction((transaction) async {
-      final threadSnapshot = await transaction.get(threadDocRef);
+      // 1. スレッド情報取得
+      final threadSnap = await transaction.get(threadDocRef);
+      if (!threadSnap.exists) {
+        throw Exception("スレッドが存在しません(threadId: $threadId)");
+      }
+      final currentCommentCount = threadSnap.get('commentCount') as int;
+      final newCommentNumber = currentCommentCount + 1;
+      final newCommentId = newCommentNumber.toString();
+      final newCommentRef = commentsCollectionRef.doc(newCommentId);
 
-      if (!threadSnapshot.exists) {
-        throw Exception("スレッドが存在しません");
+      // 2. ユーザー情報取得（初回かどうか判定）
+      final userSnap = await transaction.get(userDocRef);
+      if (!userSnap.exists) {
+        // **初回の書き込み** -> 初期フィールドを作成
+        final deviceUuid = await _getDeviceUuid();
+        transaction.set(userDocRef, {
+          'uuid': deviceUuid,
+          'ip': clientIp ?? '',
+          'postHistory': [newCommentId],
+          'threadNum': 0,
+          'resNum': 1,
+          'imageHistory':
+              imageUrls != null && imageUrls.isNotEmpty
+                  ? imageUrls
+                      .map(
+                        (url) => {
+                          'imageUrl': url,
+                          'postTime': FieldValue.serverTimestamp(),
+                        },
+                      )
+                      .toList()
+                  : [],
+        });
+      } else {
+        // **既存ユーザー** -> arrayUnion / increment で更新
+        final userUpdates = <String, dynamic>{
+          'postHistory': FieldValue.arrayUnion([newCommentId]),
+          'resNum': FieldValue.increment(1),
+        };
+        if (imageUrls != null && imageUrls.isNotEmpty) {
+          final imageEntries =
+              imageUrls
+                  .map(
+                    (url) => {
+                      'imageUrl': url,
+                      'postTime': FieldValue.serverTimestamp(),
+                    },
+                  )
+                  .toList();
+          userUpdates['imageHistory'] = FieldValue.arrayUnion(imageEntries);
+        }
+        transaction.update(userDocRef, userUpdates);
       }
 
-      final currentCommentCount = threadSnapshot.get('commentCount') as int;
-      final newCommentNumber = currentCommentCount + 1;
-
-      // 新しいレスのドキュメントIDをresNumberと同じにする
-      final newCommentRef = commentsCollectionRef.doc(
-        newCommentNumber.toString(),
-      );
-
-      // レス追加
+      // 3. コメントの追加
       transaction.set(newCommentRef, {
         'resNumber': newCommentNumber,
         'writerId': writerId,
@@ -41,9 +92,10 @@ class AddCommentService {
         if (imageUrls != null && imageUrls.isNotEmpty) 'imageUrl': imageUrls,
       });
 
-      // commentCountのインクリメント
+      // 4. スレッドの commentCount 更新
       transaction.update(threadDocRef, {
         'commentCount': FieldValue.increment(1),
+        'lastCommentTime': FieldValue.serverTimestamp(),
       });
     });
   }

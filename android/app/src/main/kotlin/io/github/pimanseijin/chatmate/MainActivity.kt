@@ -1,4 +1,4 @@
-package com.example.my_app
+package io.github.pimanseijin.chatmate
 
 import io.flutter.embedding.android.FlutterActivity
 
