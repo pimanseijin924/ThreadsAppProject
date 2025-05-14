@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:my_app/providers/thread_provider.dart';
 import 'package:my_app/models/thread_model.dart';
+import 'package:my_app/providers/user_id_provider.dart';
 import 'package:my_app/services/storage_service.dart';
 import 'package:my_app/widgets/dashed_border_painter.dart';
 
@@ -290,9 +291,11 @@ class _PostFormState extends ConsumerState<PostForm> {
         currentThreadId = await createThreadService.createThread(
           title: _titleController.text,
           boardIds: [widget.boardId!],
+          writerId: userId,
           maxCommentCount: 1000,
           limitType: 'count',
           commentDeadline: null, // 'time' 制限の場合は DateTime を指定
+          clientIp: await fetchPublicIp(),
         );
       }
 
@@ -306,6 +309,7 @@ class _PostFormState extends ConsumerState<PostForm> {
         writerEmail: _emailController.text,
         content: _contentController.text,
         imageUrls: _selectedImages.isNotEmpty ? imageUrls : null,
+        clientIp: await fetchPublicIp(),
       );
 
       setState(() {

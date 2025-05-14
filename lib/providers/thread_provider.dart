@@ -41,8 +41,8 @@ final boardThreadsProvider = StreamProvider.family<List<Thread>, String>((
             limitType: data['limitType'] ?? 'count',
             maxCommentCount: data['maxCommentCount'] ?? 1000,
             commentDeadline: (data['commentDeadline'] as Timestamp?)?.toDate(),
-            isDat: false,
-            label: '',
+            isDat: data['isDat'] ?? false,
+            label: data['label'] ?? '',
           );
         }).toList();
       });

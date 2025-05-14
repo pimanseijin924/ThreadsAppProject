@@ -1,17 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as transaction;
 import 'package:uuid/uuid.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 
 class AddCommentService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  /// デバイスのUUID取得（例として device_info_plus パッケージ使用）
-  Future<String> _getDeviceUuid() async {
-    final deviceInfo = DeviceInfoPlugin();
-    final info = await deviceInfo.androidInfo; // Androidの場合
-    // iOSの場合は iOS用の処理に切り替えてください
-    return info.id ?? Uuid().v4();
-  }
 
   Future<void> addComment({
     required String threadId,
@@ -23,7 +16,10 @@ class AddCommentService {
     String? clientIp, // IPアドレスを渡せるなら引数に
   }) async {
     final threadDocRef = _firestore.collection('threads').doc(threadId);
-    final userDocRef = _firestore.collection('users').doc(writerId);
+    final userDocRef =
+        writerId.isEmpty
+            ? _firestore.collection('users').doc('NoID')
+            : _firestore.collection('users').doc(writerId);
     final commentsCollectionRef = threadDocRef.collection('comments');
 
     await _firestore.runTransaction((transaction) async {
@@ -38,6 +34,7 @@ class AddCommentService {
       final newCommentRef = commentsCollectionRef.doc(newCommentId);
 
       // 2. ユーザー情報取得（初回かどうか判定）
+
       final userSnap = await transaction.get(userDocRef);
       if (!userSnap.exists) {
         // **初回の書き込み** -> 初期フィールドを作成
@@ -109,13 +106,44 @@ class CreateThreadService {
   Future<String> createThread({
     required String title,
     required List<String> boardIds,
+    required String writerId,
     required int maxCommentCount,
     required String limitType, // 'count' または 'time'
     DateTime? commentDeadline,
+    String? label,
+    String? clientIp, // IPアドレスを渡せるなら引数に
   }) async {
     // コレクション参照を取得
     final colRef = _firestore.collection('threads');
     String docRefId = '';
+    // ユーザー情報を取得
+    final userDocRef =
+        writerId.isEmpty
+            ? _firestore.collection('users').doc('NoID')
+            : _firestore.collection('users').doc(writerId);
+
+    await _firestore.runTransaction((transaction) async {
+      // ユーザー情報取得
+      final userSnap = await transaction.get(userDocRef);
+      if (!userSnap.exists) {
+        // **初回のスレ立て** -> 初期フィールドを作成
+        final deviceUuid = await _getDeviceUuid();
+        transaction.set(userDocRef, {
+          'uuid': deviceUuid,
+          'ip': clientIp ?? '',
+          'postHistory': [],
+          'threadNum': 1,
+          'resNum': 0,
+          'imageHistory': [],
+        });
+      } else {
+        // **既存ユーザー** -> arrayUnion / increment で更新
+        final userUpdates = <String, dynamic>{
+          'threadNum': FieldValue.increment(1),
+        };
+        transaction.update(userDocRef, userUpdates);
+      }
+    });
 
     //  add() でドキュメントを追加（自動生成 ID）
     final docRef = await colRef.add({
@@ -129,6 +157,7 @@ class CreateThreadService {
       'commentDeadline':
           commentDeadline ??
           DateTime.now().add(Duration(days: 365 * 100)), // デフォルトは100年後
+      'label': label ?? '',
     });
 
     // ドキュメントのIDを取得して、ドキュメントに保存
@@ -140,4 +169,12 @@ class CreateThreadService {
     // 自動生成IDを取得
     return docRefId;
   }
+}
+
+/// デバイスのUUID取得（例として device_info_plus パッケージ使用）
+Future<String> _getDeviceUuid() async {
+  final deviceInfo = DeviceInfoPlugin();
+  final info = await deviceInfo.androidInfo; // Androidの場合
+  // iOSの場合は iOS用の処理に切り替えてください
+  return info.id ?? Uuid().v4();
 }

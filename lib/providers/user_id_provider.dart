@@ -11,10 +11,10 @@ final userIdProvider = FutureProvider<String>((ref) async {
 
 // 許可される文字セット
 const String _allowedChars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+*-/!';
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+*-!';
 
 // 公開IPを取得する(api.ipify.orgを使用)
-Future<String> _fetchPublicIp() async {
+Future<String> fetchPublicIp() async {
   final response = await http.get(
     Uri.parse('https://api.ipify.org?format=json'),
   );
@@ -42,8 +42,8 @@ Future<String> getUserId() async {
   final savedDate = prefs.getString('user_id_date');
 
   // 日付が変わった or IDが未設定なら新しいIDを生成
-  if (savedDate != todayKey || savedId == null) {
-    final ip = await _fetchPublicIp();
+  if (savedDate != todayKey || savedId == null || savedId.isEmpty) {
+    final ip = await fetchPublicIp();
     final newId = _generateFromIp(ip, todayKey);
     //final newUserId = _generateUserId(deviceId);
     await prefs.setString('user_id', newId);

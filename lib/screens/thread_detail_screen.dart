@@ -105,10 +105,21 @@ class ThreadDetailScreen extends ConsumerWidget {
                                             Text(
                                               comment.name.isNotEmpty
                                                   ? comment.name
+                                                  : comment.userId == 'official'
+                                                  ? '運営'
                                                   : 'ななしさん',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                              style:
+                                                  comment.userId == 'official'
+                                                      ? TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.red,
+                                                      )
+                                                      : TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.black,
+                                                      ),
                                             ),
                                             if (comment.email != null &&
                                                 comment.email.isNotEmpty)
