@@ -23,7 +23,10 @@ class AddCommentService {
     String? clientIp, // IPアドレスを渡せるなら引数に
   }) async {
     final threadDocRef = _firestore.collection('threads').doc(threadId);
-    final userDocRef = _firestore.collection('users').doc(writerId);
+    final userDocRef =
+        writerId.isEmpty
+            ? _firestore.collection('users').doc('NoID')
+            : _firestore.collection('users').doc(writerId);
     final commentsCollectionRef = threadDocRef.collection('comments');
 
     await _firestore.runTransaction((transaction) async {
@@ -38,6 +41,7 @@ class AddCommentService {
       final newCommentRef = commentsCollectionRef.doc(newCommentId);
 
       // 2. ユーザー情報取得（初回かどうか判定）
+
       final userSnap = await transaction.get(userDocRef);
       if (!userSnap.exists) {
         // **初回の書き込み** -> 初期フィールドを作成
@@ -112,6 +116,7 @@ class CreateThreadService {
     required int maxCommentCount,
     required String limitType, // 'count' または 'time'
     DateTime? commentDeadline,
+    String? label,
   }) async {
     // コレクション参照を取得
     final colRef = _firestore.collection('threads');
@@ -129,6 +134,7 @@ class CreateThreadService {
       'commentDeadline':
           commentDeadline ??
           DateTime.now().add(Duration(days: 365 * 100)), // デフォルトは100年後
+      'label': label ?? '',
     });
 
     // ドキュメントのIDを取得して、ドキュメントに保存

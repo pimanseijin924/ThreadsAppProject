@@ -46,6 +46,16 @@ dev_dependencies:
   build_runner: ^2.3.3    # コード生成ツール
   change_app_package_name: ^1.5.0 # Android アプリのパッケージ名変更ツール
   flutter_launcher_icons: ^0.13.1 # アイコン生成ツール
+  flutter_native_splash: ^2.2.12 # スプラッシュ画面生成ツール
+  flutter_svg: ^1.1.6 # SVG画像を表示するためのパッケージ
+  rename_app: ^1.6.2 # アプリ名変更ツール
+  #flutter_local_notifications: ^15.0.0 # ローカル通知
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_icon_dev.png"
+#``` :contentReference[oaicite:1]{index=1}  
 
 flutter:
   generate: true

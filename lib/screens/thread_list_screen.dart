@@ -196,11 +196,27 @@ class _ThreadListScreenState extends ConsumerState<ThreadListScreen> {
         error: (e, st) => Center(child: Text('エラーが発生しました: $e')),
       ),
 
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/threads_create/${widget.boardId}');
-        },
-        child: Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: 'createThread',
+            onPressed: () {
+              context.push('/threads_create/${widget.boardId}');
+            },
+            child: const Icon(Icons.add),
+            tooltip: 'スレッド作成',
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: 'createDevThread',
+            onPressed: () {
+              context.push('/threads_create_dev/${widget.boardId}');
+            },
+            child: const Icon(Icons.build),
+            tooltip: '開発者用スレッド作成',
+          ),
+        ],
       ),
     );
   }

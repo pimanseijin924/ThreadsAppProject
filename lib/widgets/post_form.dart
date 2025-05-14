@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:my_app/providers/thread_provider.dart';
 import 'package:my_app/models/thread_model.dart';
+import 'package:my_app/providers/user_id_provider.dart';
 import 'package:my_app/services/storage_service.dart';
 import 'package:my_app/widgets/dashed_border_painter.dart';
 
@@ -12,6 +14,7 @@ class PostForm extends ConsumerStatefulWidget {
   final String formType;
   final Thread? thread;
   final String? boardId; // スレッド作成時に必要
+  final bool? isDevelopper;
 
   const PostForm({
     Key? key,
@@ -19,6 +22,7 @@ class PostForm extends ConsumerStatefulWidget {
     required this.formType,
     this.thread,
     this.boardId,
+    this.isDevelopper = false,
   }) : super(key: key);
 
   @override
@@ -35,9 +39,14 @@ class _PostFormState extends ConsumerState<PostForm> {
   bool _isUploading = false;
   double _uploadProgress = 0.0;
   final StorageService _storageService = StorageService();
+  // 開発者向け画面に使用
+  String _selectedThreadLabel = '';
+  final TextEditingController _maxCommentController = TextEditingController();
+  String _selectedWriterId = '';
 
   @override
   Widget build(BuildContext context) {
+    String _selectedWriterId = widget.userId;
     return _postFormComponent(
       context,
       ref,
@@ -53,12 +62,67 @@ class _PostFormState extends ConsumerState<PostForm> {
     String userId,
     Thread thread,
   ) {
+    if (widget.isDevelopper == false) {
+      _selectedWriterId = userId;
+    }
     return Padding(
       padding: const EdgeInsets.all(16),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Text('ユーザーID: $_selectedWriterId'),
+            if (widget.isDevelopper == true) ...[
+              const Text(
+                '開発者向け設定',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              if (widget.formType == 'thread') ...[
+                DropdownButtonFormField<String>(
+                  value: _selectedThreadLabel,
+                  decoration: const InputDecoration(labelText: 'スレッドタイプ'),
+                  items: const [
+                    DropdownMenuItem(value: '', child: Text('通常')),
+                    DropdownMenuItem(value: 'official', child: Text('公式')),
+                    DropdownMenuItem(value: 'honsure', child: Text('本スレ')),
+                    DropdownMenuItem(value: 'jikkyou', child: Text('実況')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedThreadLabel = value ?? '';
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _maxCommentController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(
+                    labelText: '最大コメント数',
+                    hintText: '例: 100',
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+              if (widget.formType == 'response') ...[
+                DropdownButtonFormField<String>(
+                  value: _selectedWriterId,
+                  decoration: const InputDecoration(labelText: '投稿ID'),
+                  items: [
+                    DropdownMenuItem(value: userId, child: Text('通常')),
+                    DropdownMenuItem(value: '', child: Text('IDなし')),
+                    DropdownMenuItem(value: 'official', child: Text('運営ID')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedWriterId = value ?? _selectedWriterId;
+                    });
+                  },
+                ),
+              ],
+            ],
             if (widget.formType == 'thread')
               TextField(
                 controller: _titleController,
@@ -97,7 +161,8 @@ class _PostFormState extends ConsumerState<PostForm> {
               onPressed:
                   _isUploading
                       ? null
-                      : () => _postComment(context, ref, userId, thread),
+                      : () =>
+                          _postComment(context, ref, _selectedWriterId, thread),
               child: _isUploading ? Text('投稿中...') : Text('投稿'),
             ),
           ],
@@ -306,6 +371,7 @@ class _PostFormState extends ConsumerState<PostForm> {
         writerEmail: _emailController.text,
         content: _contentController.text,
         imageUrls: _selectedImages.isNotEmpty ? imageUrls : null,
+        clientIp: await fetchPublicIp(),
       );
 
       setState(() {

@@ -106,9 +106,18 @@ class ThreadDetailScreen extends ConsumerWidget {
                                               comment.name.isNotEmpty
                                                   ? comment.name
                                                   : 'ななしさん',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                              style:
+                                                  comment.userId == 'official'
+                                                      ? TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.red,
+                                                      )
+                                                      : TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.black,
+                                                      ),
                                             ),
                                             if (comment.email != null &&
                                                 comment.email.isNotEmpty)
@@ -169,11 +178,26 @@ class ThreadDetailScreen extends ConsumerWidget {
                 (error, stack) =>
                     Center(child: Text('コメントの読み込み中にエラーが発生しました: $error')),
           ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              context.push('/thread/post', extra: thread);
-            },
-            child: Icon(Icons.edit),
+          floatingActionButton: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton(
+                heroTag: 'postResponse',
+                onPressed: () {
+                  context.push('/thread/post', extra: thread);
+                },
+                child: Icon(Icons.edit),
+              ),
+              const SizedBox(height: 12),
+              FloatingActionButton(
+                heroTag: 'createDevThread',
+                onPressed: () {
+                  context.push('/thread/post_dev', extra: thread);
+                },
+                child: const Icon(Icons.build),
+                tooltip: '開発者用レス投稿',
+              ),
+            ],
           ),
         );
       },

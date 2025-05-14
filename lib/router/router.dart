@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_app/models/thread_model.dart';
-import 'package:my_app/screens/create_thread_screen.dart';
+import 'package:my_app/screens/post_thread_screen_dev.dart';
 import 'package:my_app/widgets/base_shell.dart';
-import 'package:my_app/screens/post_thread_screen.dart';
 import 'package:my_app/screens/channel_list_screen.dart';
 import 'package:my_app/screens/board_list_screen.dart';
 import 'package:my_app/screens/thread_list_screen.dart';
+import 'package:my_app/screens/create_thread_screen.dart';
+import 'package:my_app/screens/create_thread_screen_dev.dart';
 import 'package:my_app/screens/thread_detail_screen.dart';
+import 'package:my_app/screens/post_thread_screen.dart';
 import 'package:my_app/screens/setting_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -128,11 +130,57 @@ final GoRouter router = GoRouter(
               },
             ),
             GoRoute(
+              path: '/thread/post_dev',
+              pageBuilder: (context, state) {
+                final thread = state.extra as Thread;
+                return CustomTransitionPage(
+                  child: PostThreadScreenDev(thread: thread),
+                  transitionsBuilder: (
+                    context,
+                    animation,
+                    secondaryAnimation,
+                    child,
+                  ) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 1),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    );
+                  },
+                );
+              },
+            ),
+            GoRoute(
               path: '/threads_create/:boardId',
               pageBuilder: (context, state) {
                 final boardId = state.pathParameters['boardId']!;
                 return CustomTransitionPage(
                   child: CreateThreadScreen(boardId: boardId),
+                  transitionsBuilder: (
+                    context,
+                    animation,
+                    secondaryAnimation,
+                    child,
+                  ) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 1),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    );
+                  },
+                );
+              },
+            ),
+            GoRoute(
+              path: '/threads_create_dev/:boardId',
+              pageBuilder: (context, state) {
+                final boardId = state.pathParameters['boardId']!;
+                return CustomTransitionPage(
+                  child: CreateThreadScreenDev(boardId: boardId),
                   transitionsBuilder: (
                     context,
                     animation,
