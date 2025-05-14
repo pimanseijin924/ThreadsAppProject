@@ -17,12 +17,12 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "io.github.pimanseijin.chatmate"
+    namespace = "chatmate.prerelease"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
-        applicationId = "io.github.pimanseijin.chatmate"
+        applicationId = "chatmate.prerelease"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

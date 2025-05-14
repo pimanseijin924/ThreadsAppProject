@@ -1,4 +1,4 @@
-package io.github.pimanseijin.chatmate
+package chatmate.prerelease
 
 import io.flutter.embedding.android.FlutterActivity
 
