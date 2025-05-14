@@ -105,6 +105,8 @@ class ThreadDetailScreen extends ConsumerWidget {
                                             Text(
                                               comment.name.isNotEmpty
                                                   ? comment.name
+                                                  : comment.userId == 'official'
+                                                  ? '運営'
                                                   : 'ななしさん',
                                               style:
                                                   comment.userId == 'official'
