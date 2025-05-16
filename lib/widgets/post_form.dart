@@ -358,6 +358,7 @@ class _PostFormState extends ConsumerState<PostForm> {
           maxCommentCount: 1000,
           limitType: 'count',
           commentDeadline: null, // 'time' 制限の場合は DateTime を指定
+          label: _selectedThreadLabel,
         );
       }
 

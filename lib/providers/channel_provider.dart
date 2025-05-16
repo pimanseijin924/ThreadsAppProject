@@ -7,7 +7,7 @@ import '../models/channel_model.dart';
 final channelListProvider = StreamProvider<List<Channel>>((ref) {
   return FirebaseFirestore.instance
       .collection('channels')
-      .orderBy('id', descending: false)
+      .orderBy('preId', descending: false)
       .snapshots()
       .map(
         (snapshot) =>
