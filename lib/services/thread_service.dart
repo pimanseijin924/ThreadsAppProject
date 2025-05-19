@@ -45,17 +45,12 @@ class AddCommentService {
           'postHistory': [newCommentId],
           'threadNum': 0,
           'resNum': 1,
-          'imageHistory':
+          'imageHistory': imageUrls != null ? imageUrls : [],
+          // タイムスタンプは別フィールドで管理
+          'lastImagePostTime':
               imageUrls != null && imageUrls.isNotEmpty
-                  ? imageUrls
-                      .map(
-                        (url) => {
-                          'imageUrl': url,
-                          'postTime': FieldValue.serverTimestamp(),
-                        },
-                      )
-                      .toList()
-                  : [],
+                  ? FieldValue.serverTimestamp()
+                  : null,
         });
       } else {
         // **既存ユーザー** -> arrayUnion / increment で更新
@@ -64,16 +59,19 @@ class AddCommentService {
           'resNum': FieldValue.increment(1),
         };
         if (imageUrls != null && imageUrls.isNotEmpty) {
-          final imageEntries =
-              imageUrls
-                  .map(
-                    (url) => {
-                      'imageUrl': url,
-                      'postTime': FieldValue.serverTimestamp(),
-                    },
-                  )
-                  .toList();
-          userUpdates['imageHistory'] = FieldValue.arrayUnion(imageEntries);
+          userUpdates['imageHistory'] = FieldValue.arrayUnion(imageUrls);
+          // タイムスタンプは別フィールドでまとめて更新
+          userUpdates['lastImagePostTime'] = FieldValue.serverTimestamp();
+          // final imageEntries =
+          //     imageUrls
+          //         .map(
+          //           (url) => {
+          //             'imageUrl': url,
+          //             'postTime': FieldValue.serverTimestamp(),
+          //           },
+          //         )
+          //         .toList();
+          // userUpdates['imageHistory'] = FieldValue.arrayUnion(imageEntries);
         }
         transaction.update(userDocRef, userUpdates);
       }

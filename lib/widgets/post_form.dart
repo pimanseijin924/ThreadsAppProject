@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -265,52 +266,83 @@ class _PostFormState extends ConsumerState<PostForm> {
       List<String> imageUrls = [];
       var currentThreadId = thread.id;
 
-      // 画像があれば先にアップロード
-      if (_selectedImages.isNotEmpty) {
-        for (int i = 0; i < _selectedImages.length; i++) {
-          final image = _selectedImages[i];
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
-          final fileName = 'thread_${thread.title}_comment_$timestamp.jpg';
+      try {
+        // 画像があれば先にアップロード
+        if (_selectedImages.isNotEmpty) {
+          for (int i = 0; i < _selectedImages.length; i++) {
+            final image = _selectedImages[i];
+            final timestamp = DateTime.now().millisecondsSinceEpoch;
+            final fileName = 'thread_${thread.title}_comment_$timestamp.jpg';
 
-          final imageUrl = await _storageService.uploadImage(
-            File(image.path),
-            fileName,
-          );
-          imageUrls.add(imageUrl);
+            final imageUrl = await _storageService.uploadImage(
+              File(image.path),
+              fileName,
+            );
+            imageUrls.add(imageUrl);
+            print('\nUploaded image URL: $imageUrls');
 
-          setState(() {
-            _uploadProgress = (i + 1) / _selectedImages.length * 0.7;
-          });
+            setState(() {
+              _uploadProgress = (i + 1) / _selectedImages.length * 0.7;
+            });
+          }
         }
+      } catch (e) {
+        setState(() {
+          _isUploading = false;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('画像のアップロードに失敗しました$e')));
+        return;
       }
 
-      // スレッド作成の場合はスレッド作成処理を実行
-      if (widget.formType == 'thread') {
-        final createThreadService = ref.read(createThreadProvider);
+      try {
+        // スレッド作成の場合はスレッド作成処理を実行
+        if (widget.formType == 'thread') {
+          final createThreadService = ref.read(createThreadProvider);
 
-        currentThreadId = await createThreadService.createThread(
-          title: _titleController.text,
-          boardIds: [widget.boardId!],
+          currentThreadId = await createThreadService.createThread(
+            title: _titleController.text,
+            boardIds: [widget.boardId!],
+            writerId: userId,
+            maxCommentCount: 1000,
+            limitType: 'count',
+            commentDeadline: null, // 'time' 制限の場合は DateTime を指定
+            clientIp: await fetchPublicIp(),
+          );
+        }
+      } catch (e) {
+        setState(() {
+          _isUploading = false;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('スレッドの作成に失敗しました$e')));
+        return;
+      }
+
+      try {
+        // 書き込みを追加
+        final addCommentService = ref.read(addCommentProvider);
+
+        await addCommentService.addComment(
+          threadId: currentThreadId,
           writerId: userId,
-          maxCommentCount: 1000,
-          limitType: 'count',
-          commentDeadline: null, // 'time' 制限の場合は DateTime を指定
-          clientIp: await fetchPublicIp(),
+          writerName: _nameController.text,
+          writerEmail: _emailController.text,
+          content: _contentController.text,
+          imageUrls: _selectedImages.isNotEmpty ? imageUrls : null,
+          // clientIp: await fetchPublicIp(),
         );
+      } catch (e) {
+        setState(() {
+          _isUploading = false;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('書き込みの追加に失敗しました$e')));
+        return;
       }
-
-      // 書き込みを追加
-      final addCommentService = ref.read(addCommentProvider);
-
-      await addCommentService.addComment(
-        threadId: currentThreadId,
-        writerId: userId,
-        writerName: _nameController.text,
-        writerEmail: _emailController.text,
-        content: _contentController.text,
-        imageUrls: _selectedImages.isNotEmpty ? imageUrls : null,
-        clientIp: await fetchPublicIp(),
-      );
 
       setState(() {
         _uploadProgress = 0.9; // コメント追加完了
@@ -326,9 +358,25 @@ class _PostFormState extends ConsumerState<PostForm> {
         _isUploading = false;
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('エラーが発生しました: $e')));
+      if (e is FirebaseException) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'エラーが発生しました\n'
+              '種類: ${e.code}\n'
+              '詳細: ${e.message}\n'
+              'プラグイン: ${e.plugin}\n'
+              'スタックトレース: ${e.stackTrace}\n',
+            ),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        print('エラーが発生しました: ${e.code} - ${e.message}');
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('エラーが発生しました: $e')));
+      }
     }
   }
 

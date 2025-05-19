@@ -29,7 +29,7 @@ class Comment {
       email: data['writerEmail'] ?? '',
       content: data['content'] ?? '',
       userId: data['writerId'] ?? '',
-      sendTime: data['sendtime'] ?? DateTime.now(),
+      sendTime: (data['sendtime'] as Timestamp).toDate() ?? DateTime.now(),
       imageUrl:
           data['imageUrl'] != null ? List<String>.from(data['imageUrl']) : null,
       imagePath: data['imagePath'],

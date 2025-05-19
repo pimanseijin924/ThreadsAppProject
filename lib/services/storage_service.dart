@@ -2,7 +2,11 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class StorageService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseStorage _storage =
+      FirebaseStorage.instance
+        ..setMaxUploadRetryTime(const Duration(minutes: 5))
+        ..setMaxOperationRetryTime(const Duration(minutes: 5));
+  // タイムアウトを 5 分に設定
 
   Future<String> uploadImage(File imageFile, String fileName) async {
     try {
@@ -29,9 +33,28 @@ class StorageService {
 
       // 画像のダウンロードURLを取得
       final downloadUrl = await storageRef.getDownloadURL();
+      print('\nDownload URL: $downloadUrl');
       return downloadUrl;
     } on FirebaseException catch (e) {
-      throw Exception('画像のアップロードに失敗しました: ${e.message}');
+      // ↓ここで必ずエラーコードとメッセージをログ出力↓
+      print(
+        '🔴 Firebase Storage Error ▶ code: ${e.code}, message: ${e.message}',
+      );
+      // 必要に応じて、コードごとに処理を分岐
+      switch (e.code) {
+        case 'storage/object-not-found':
+          // ファイル自体が存在しない
+          print('File not found');
+          break;
+        case 'storage/unauthorized':
+          // 認証は通っているがルール上許可されていない
+          print('Unauthorized access');
+          break;
+        // 他のケースも handle...
+        default:
+        // 想定外のエラー
+      }
+      rethrow;
     }
   }
 
